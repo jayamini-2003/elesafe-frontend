@@ -20,7 +20,7 @@ if (Platform.OS === "android") {
 export default function SafetyScreen() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const EMERGENCY_NUMBER = "1990"; // 🔥 change if needed
+  const EMERGENCY_NUMBER = "1124"; // 🔥 change if needed
 
   const handleSOS = async () => {
     const phoneUrl = `tel:${EMERGENCY_NUMBER}`;
@@ -72,6 +72,7 @@ export default function SafetyScreen() {
           justifyContent: "space-between",
           alignItems: "center",
           padding: 20,
+          marginTop:25,
         }}
       >
         <Text style={{ color: "white", fontSize: 22, fontWeight: "bold" }}>
@@ -99,7 +100,7 @@ export default function SafetyScreen() {
       <View style={{ marginHorizontal: 20 }}>
         <Image
           source={{
-            uri: "https://images.unsplash.com/photo-1557053964-937650b63311",
+            uri: "https://images.unsplash.com/photo-1564760055775-d63b17a55c44?q=80&w=1280",
           }}
           style={{
             width: "100%",
@@ -109,20 +110,6 @@ export default function SafetyScreen() {
         />
 
         <View style={{ position: "absolute", bottom: 15, left: 15 }}>
-          <View
-            style={{
-              backgroundColor: "#13ec37",
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 8,
-              marginBottom: 5,
-            }}
-          >
-            <Text style={{ color: "black", fontSize: 12 }}>
-              ESSENTIAL GUIDE
-            </Text>
-          </View>
-
           <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
             Staying safe around Wild Elephants
           </Text>
