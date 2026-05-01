@@ -1,6 +1,10 @@
-import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import {
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { router } from "expo-router";
-import React from "react";
+import { useEffect, useState } from "react";
 import {
   Image,
   Pressable,
@@ -9,6 +13,7 @@ import {
   Text,
   View,
 } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 
 export default function Home() {
   const user = {
@@ -17,10 +22,75 @@ export default function Home() {
     avatar: "https://i.pravatar.cc/100",
   };
 
-  return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+  const [region, setRegion] = useState<any>(null);
 
-      {/* APP HEADER */}
+  // Dummy alerts (replace later with Firebase)
+  const [alerts] = useState([
+    {
+      id: "1",
+      latitude: 6.9285,
+      longitude: 79.862,
+      title: "Elephant",
+    },
+    {
+      id: "2",
+      latitude: 6.9265,
+      longitude: 79.8605,
+      title: "Fence Damage",
+    },
+    {
+      id: "3",
+      latitude: 6.931,
+      longitude: 79.864,
+      title: "Elephant Movement",
+    },
+  ]);
+
+  // 📍 Get user location
+  useEffect(() => {
+    (async () => {
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") return;
+
+      const loc = await Location.getCurrentPositionAsync({});
+
+      setRegion({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    })();
+  }, []);
+
+  // 📏 Distance function (km)
+  const getDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  };
+
+  return (
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* HEADER */}
       <View style={styles.appHeader}>
         <Text style={styles.appName}>EleSafe Lanka</Text>
        <Pressable onPress={() => router.push("/notifications")}>
@@ -28,7 +98,7 @@ export default function Home() {
 </Pressable>
       </View>
 
-      {/* PROFILE SECTION */}
+      {/* PROFILE */}
       <View style={styles.header}>
         <Image source={{ uri: user.avatar }} style={styles.avatar} />
 
@@ -40,13 +110,17 @@ export default function Home() {
 
           <View style={styles.statusRow}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Current Status: Safe</Text>
-            <Text style={styles.timeText}>Updated 2 min ago</Text>
+            <Text style={styles.statusText}>
+              Current Status: Safe
+            </Text>
+            <Text style={styles.timeText}>
+              Updated 2 min ago
+            </Text>
           </View>
         </View>
       </View>
 
-      {/* REPORT SECTION */}
+      {/* REPORT */}
       <View style={styles.card}>
         <View style={styles.rowBetween}>
           <Text style={styles.cardTitle}>Report Incident</Text>
@@ -54,7 +128,7 @@ export default function Home() {
         </View>
 
         <Text style={styles.description}>
-          Spotted an elephant? Report it immediately to alert nearby villagers.
+          Spotted an elephant? Report it immediately.
         </Text>
 
         <Pressable
@@ -62,20 +136,79 @@ export default function Home() {
           onPress={() => router.push("/(tabs)/report")}
         >
           <MaterialIcons name="camera-alt" size={20} color="black" />
-          <Text style={styles.reportBtnText}>REPORT SIGHTING</Text>
+          <Text style={styles.reportBtnText}>
+            REPORT SIGHTING
+          </Text>
         </Pressable>
       </View>
 
-      {/* LIVE MAP */}
+      {/* 🗺 LIVE MAP */}
       <Pressable
         style={styles.mapCard}
         onPress={() => router.push("/(tabs)/map")}
       >
-        <Text style={styles.mapLabel}>Live Map View</Text>
-        <Text style={styles.expand}>Expand ↗</Text>
+        {region && (
+          <MapView
+            style={{ flex: 1 }}
+            region={{
+              latitude: region.latitude,
+              longitude: region.longitude,
+              latitudeDelta: 0.008,
+              longitudeDelta: 0.008,
+            }}
+            scrollEnabled={false}
+            zoomEnabled={false}
+          >
+            {/* 🟢 USER */}
+            <Marker
+              coordinate={{
+                latitude: region.latitude,
+                longitude: region.longitude,
+              }}
+            >
+              <View style={styles.userDot} />
+            </Marker>
+
+            {/* 🔴 ALERTS (2km radius filter) */}
+            {alerts
+              .filter(
+                (a) =>
+                  getDistance(
+                    region.latitude,
+                    region.longitude,
+                    a.latitude,
+                    a.longitude
+                  ) < 2
+              )
+              .map((alert) => (
+                <Marker
+                  key={alert.id}
+                  coordinate={{
+                    latitude: alert.latitude,
+                    longitude: alert.longitude,
+                  }}
+                >
+                  <View style={styles.alertDot} />
+                </Marker>
+              ))}
+          </MapView>
+        )}
+
+        {/* MAP TITLE */}
+        <View style={styles.mapOverlay}>
+          <Text style={styles.mapLabel}>Live Map View</Text>
+        </View>
+
+        {/* ↗ EXPAND BUTTON (BOTTOM RIGHT) */}
+        <Pressable
+          style={styles.expandBtn}
+          onPress={() => router.push("/(tabs)/map")}
+        >
+          <Text style={styles.expandText}>Expand ↗</Text>
+        </Pressable>
       </Pressable>
 
-      {/* RECENT ALERTS */}
+      {/* ALERTS */}
       <View style={{ marginTop: 20 }}>
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>Recent Alerts</Text>
@@ -83,43 +216,46 @@ export default function Home() {
         </View>
 
         <View style={styles.alertCard}>
-          <MaterialCommunityIcons name="paw" size={22} color="orange" />
+          <MaterialCommunityIcons
+            name="paw"
+            size={22}
+            color="orange"
+          />
           <View style={{ marginLeft: 10, flex: 1 }}>
-            <Text style={styles.alertText}>Elephant Spotted</Text>
+            <Text style={styles.alertText}>
+              Elephant Spotted
+            </Text>
             <Text style={styles.alertSub}>10m ago</Text>
           </View>
           <Text style={styles.badge}>1.2 km</Text>
-        </View>
-
-        <View style={styles.alertCard}>
-          <MaterialCommunityIcons name="fence" size={22} color="orange" />
-          <View style={{ marginLeft: 10, flex: 1 }}>
-            <Text style={styles.alertText}>Fence Damaged</Text>
-            <Text style={styles.alertSub}>45m ago</Text>
-          </View>
-          <Text style={styles.badge}>3.5 km</Text>
         </View>
       </View>
 
       {/* SAFETY */}
       <View style={{ marginTop: 20 }}>
-        <Text style={styles.sectionTitle}>Safety & Community</Text>
+        <Text style={styles.sectionTitle}>
+          Safety & Community
+        </Text>
 
-        {/* ✅ UPDATED: NOW NAVIGATES */}
         <Pressable
           style={styles.smallCard}
           onPress={() => router.push("/(tabs)/safety")}
         >
-          <MaterialIcons name="wb-sunny" size={22} color="#13ec37" />
+          <MaterialIcons
+            name="wb-sunny"
+            size={22}
+            color="#13ec37"
+          />
           <View style={{ marginLeft: 10 }}>
-            <Text style={styles.smallTitle}>Night Safety</Text>
+            <Text style={styles.smallTitle}>
+              Night Safety
+            </Text>
             <Text style={styles.smallText}>
-              Stay indoors and avoid forest edges at night.
+              Stay indoors and avoid forest edges.
             </Text>
           </View>
         </Pressable>
       </View>
-
     </ScrollView>
   );
 }
@@ -134,9 +270,7 @@ const styles = StyleSheet.create({
   appHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginTop: 10,
-    marginBottom: 0,
   },
 
   appName: {
@@ -158,27 +292,13 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
 
-  name: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-
-  location: {
-    color: "#9ca3af",
-    fontSize: 13,
-  },
-
-  greeting: {
-    color: "white",
-    marginTop: 5,
-    fontSize: 14,
-  },
+  name: { color: "white", fontSize: 18, fontWeight: "bold" },
+  location: { color: "#9ca3af", fontSize: 13 },
+  greeting: { color: "white", marginTop: 5 },
 
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
   },
 
   statusDot: {
@@ -189,17 +309,8 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
-  statusText: {
-    color: "#13ec37",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  timeText: {
-    color: "#9ca3af",
-    fontSize: 11,
-    marginLeft: 10,
-  },
+  statusText: { color: "#13ec37", fontSize: 12 },
+  timeText: { color: "#9ca3af", fontSize: 11, marginLeft: 10 },
 
   card: {
     marginTop: 20,
@@ -211,20 +322,10 @@ const styles = StyleSheet.create({
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
   },
 
-  cardTitle: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  description: {
-    color: "#9ca3af",
-    marginTop: 8,
-    fontSize: 13,
-  },
+  cardTitle: { color: "white", fontWeight: "bold" },
+  description: { color: "#9ca3af", marginTop: 8 },
 
   reportBtn: {
     marginTop: 12,
@@ -234,42 +335,62 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
   },
 
-  reportBtnText: {
-    color: "black",
-    fontWeight: "bold",
-  },
+  reportBtnText: { color: "black", fontWeight: "bold" },
 
   mapCard: {
     marginTop: 20,
-    height: 140,
-    backgroundColor: "#1a2c1d",
+    height: 180,
     borderRadius: 14,
-    padding: 12,
-    justifyContent: "space-between",
+    overflow: "hidden",
   },
 
-  mapLabel: {
-    color: "white",
-    fontWeight: "bold",
+  mapOverlay: {
+    position: "absolute",
+    top: 10,
+    left: 10,
   },
 
-  expand: {
-    color: "#9ca3af",
-    alignSelf: "flex-end",
+  mapLabel: { color: "white", fontWeight: "bold" },
+
+  expandBtn: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    backgroundColor: "#1c3020",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#13ec37",
   },
 
-  sectionTitle: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  viewAll: {
+  expandText: {
     color: "#13ec37",
+    fontSize: 12,
   },
+
+  userDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#13ec37",
+    borderWidth: 2,
+    borderColor: "white",
+  },
+
+  alertDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#ef4444",
+    borderWidth: 2,
+    borderColor: "white",
+  },
+
+  sectionTitle: { color: "white", fontWeight: "bold" },
+  viewAll: { color: "#13ec37" },
 
   alertCard: {
     flexDirection: "row",
@@ -280,23 +401,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  alertText: {
-    color: "white",
-    fontWeight: "600",
-  },
-
-  alertSub: {
-    color: "#9ca3af",
-    fontSize: 12,
-  },
+  alertText: { color: "white" },
+  alertSub: { color: "#9ca3af", fontSize: 12 },
 
   badge: {
     color: "white",
     backgroundColor: "#ef4444",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    padding: 6,
     borderRadius: 8,
-    fontSize: 12,
   },
 
   smallCard: {
@@ -305,16 +417,8 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginTop: 10,
-    alignItems: "center",
   },
 
-  smallTitle: {
-    color: "white",
-    fontWeight: "600",
-  },
-
-  smallText: {
-    color: "#9ca3af",
-    fontSize: 12,
-  },
+  smallTitle: { color: "white" },
+  smallText: { color: "#9ca3af", fontSize: 12 },
 });

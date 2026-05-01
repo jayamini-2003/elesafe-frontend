@@ -1,16 +1,34 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { router } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 
 export default function MapScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const mapRef = useRef<MapView | null>(null);
+
+  const [location, setLocation] = useState<any>(null);
+
+  const [alerts, setAlerts] = useState([
+    {
+      id: 1,
+      title: "LONE BULL",
+      locationName: "Mahiyanganaya",
+      latitude: 7.3333,
+      longitude: 81.0,
+      distance: "500m",
+      time: "12m ago",
+    },
+  ]);
 
   useEffect(() => {
     Animated.loop(
@@ -27,9 +45,82 @@ export default function MapScreen() {
         }),
       ])
     ).start();
+
+    getUserLocation();
+
+    const interval = setInterval(() => {
+      setAlerts((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          title: "ELEPHANT ALERT",
+          locationName: "Mahiyanganaya",
+          latitude: 7.3333 + Math.random() * 0.01,
+          longitude: 81.0 + Math.random() * 0.01,
+          distance: `${Math.floor(Math.random() * 1000)}m`,
+          time: "Just now",
+        },
+      ]);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
+  const getUserLocation = async () => {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") return;
+
+    const userLocation =
+      await Location.getCurrentPositionAsync({});
+
+    setLocation(userLocation.coords);
+  };
+
+  const focusOnAlert = (alert: any) => {
+    mapRef.current?.animateToRegion(
+      {
+        latitude: alert.latitude,
+        longitude: alert.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      1000
+    );
+  };
+
+  const latestAlert = alerts[alerts.length - 1];
+
   return (
+    <View style={styles.container}>
+      {/* 🗺 FULL MAP */}
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFillObject}
+        showsUserLocation={true}
+        followsUserLocation={true}
+        showsMyLocationButton={true}   // ✅ DEFAULT BUTTON ENABLED
+        initialRegion={{
+          latitude: location?.latitude || 7.3333,
+          longitude: location?.longitude || 81.0,
+          latitudeDelta: 0.2,
+          longitudeDelta: 0.2,
+        }}
+      >
+        {alerts.map((alert) => (
+          <Marker
+            key={alert.id}
+            coordinate={{
+              latitude: alert.latitude,
+              longitude: alert.longitude,
+            }}
+            title={alert.title}
+          >
+            <MaterialIcons name="warning" size={30} color="red" />
+          </Marker>
+        ))}
+      </MapView>
     <View style={{ flex: 1, backgroundColor: "#102213" }}>
 
       {/* TOP BAR */}
@@ -47,127 +138,142 @@ export default function MapScreen() {
         >
           <MaterialIcons name="menu" size={22} color="white" />
 
+      {/* 🔍 SEARCH BAR */}
+      <View style={styles.topBar}>
+        <View style={styles.searchBox}>
+          <MaterialIcons name="menu" size={22} color="white" />
           <TextInput
             placeholder="Search zones..."
             placeholderTextColor="#6b7280"
-            style={{ flex: 1, color: "white", marginLeft: 10 }}
+            style={styles.input}
           />
-
           <MaterialIcons name="search" size={22} color="white" />
         </View>
       </View>
 
-      {/* MAP CARD (REDUCED HEIGHT) */}
-      <View style={{ paddingHorizontal: 15 }}>
-
-        <View
-          style={{
-            height: 220,   // 🔥 reduced size
-            backgroundColor: "#0f1f14",
-            borderRadius: 18,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#6b7280" }}>🌄 Map View</Text>
-
-          {/* Marker */}
-          <View
-            style={{
-              position: "absolute",
-              top: "40%",
-              left: "45%",
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: "red",
-                padding: 6,
-                borderRadius: 20,
-              }}
-            >
-              <MaterialIcons name="warning" size={18} color="white" />
-            </View>
-
-            <Text style={{ color: "white", fontSize: 12 }}>
-              LONE BULL
-            </Text>
-          </View>
-        </View>
-
-        {/* 🔴 WARNING UNDER MAP (JUMPING) */}
+      {/* 🚨 LIVE ALERT */}
+      <Pressable onPress={() => focusOnAlert(latestAlert)}>
         <Animated.View
-          style={{
-            marginTop: 10,
-            backgroundColor: "#ef4444",
-            padding: 12,
-            borderRadius: 12,
-            transform: [{ scale: pulseAnim }],
-          }}
+          style={[
+            styles.warningCard,
+            { transform: [{ scale: pulseAnim }] },
+          ]}
         >
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <MaterialIcons name="warning" size={20} color="white" />
-            <Text
-              style={{
-                color: "white",
-                fontWeight: "bold",
-                marginLeft: 8,
-              }}
-            >
-              IMMEDIATE WARNING
-            </Text>
-          </View>
+          <Text style={styles.warningTitle}>
+            🚨 LIVE ALERT - {latestAlert.locationName}
+          </Text>
 
-          <Text style={{ color: "white", marginTop: 5 }}>
-            Lone Bull spotted 500m North moving towards village.
+          <Text style={styles.warningText}>
+            Elephant detected in {latestAlert.locationName}. Tap to
+            view location.
           </Text>
         </Animated.View>
-      </View>
+      </Pressable>
 
-      {/* BOTTOM SHEET */}
-      <View
-        style={{
-          marginTop: 15,
-          backgroundColor: "#1c3020",
-          padding: 15,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-        }}
-      >
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <View>
-            <Text style={{ color: "white", fontWeight: "bold" }}>
-              Nearby Activity
-            </Text>
-            <Text style={{ color: "#6b7280", fontSize: 12 }}>
-              3 reports in last 2 hours
-            </Text>
-          </View>
+      {/* 📊 BOTTOM SHEET */}
+      <View style={styles.bottomSheet}>
+        <View style={styles.bottomHeader}>
+          <Text style={styles.bottomTitle}>Live Activity</Text>
 
           <Pressable
             onPress={() => router.push("/report")}
-            style={{
-              backgroundColor: "#13ec37",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 10,
-            }}
+            style={styles.reportButton}
           >
-            <Text style={{ fontWeight: "bold", color: "black" }}>
-              + Report
-            </Text>
+            <Text style={styles.reportText}>+ Report</Text>
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 15 }}>
-          <Text style={{ color: "white" }}>Lone Bull Alert • 12m ago</Text>
-          <Text style={{ color: "#6b7280", fontSize: 12 }}>
-            0.5 km away
-          </Text>
-        </View>
+        {alerts.slice(-3).map((alert) => (
+          <View key={alert.id} style={{ marginTop: 10 }}>
+            <Text style={{ color: "white" }}>
+              {alert.title} • {alert.time}
+            </Text>
+            <Text style={{ color: "#6b7280" }}>
+              {alert.distance} away
+            </Text>
+          </View>
+        ))}
       </View>
-
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+
+  topBar: {
+    position: "absolute",
+    top: 50,
+    left: 15,
+    right: 15,
+  },
+
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1c3020",
+    borderRadius: 12,
+    padding: 10,
+  },
+
+  input: {
+    flex: 1,
+    color: "white",
+    marginLeft: 10,
+  },
+
+  warningCard: {
+    position: "absolute",
+    top: 120,
+    left: 15,
+    right: 15,
+    backgroundColor: "#ef4444",
+    padding: 12,
+    borderRadius: 12,
+  },
+
+  warningTitle: {
+    color: "white",
+    fontWeight: "bold",
+  },
+
+  warningText: {
+    color: "white",
+    marginTop: 5,
+  },
+
+  bottomSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#1c3020",
+    padding: 15,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+
+  bottomHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  bottomTitle: {
+    color: "white",
+    fontWeight: "bold",
+  },
+
+  reportButton: {
+    backgroundColor: "#13ec37",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+
+  reportText: {
+    color: "black",
+    fontWeight: "bold",
+  },
+});
