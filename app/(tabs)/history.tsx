@@ -46,7 +46,7 @@ export default function HistoryScreen() {
     <View style={{ flex: 1, backgroundColor: "#102213", padding: 20 }}>
       
       {/* HEADER */}
-      <Text style={{ color: "white", fontSize: 22, fontWeight: "bold" }}>
+      <Text style={{ color: "white", fontSize: 22, fontWeight: "bold" ,paddingTop:25 ,}}>
         History
       </Text>
 
