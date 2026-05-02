@@ -1,88 +1,241 @@
+// app/report/sighting.tsx
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import { ElephantBehavior, reportService } from "../../services/reportService";
 
 export default function SightingReport() {
   const [count, setCount] = useState(1);
   const [behavior, setBehavior] = useState("Walking");
   const [image, setImage] = useState<string | null>(null);
+  const [district, setDistrict] = useState("");
+  const [village, setVillage] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [locationText, setLocationText] = useState("Tap GPS to get location");
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  // ✅ Stores the actual GPS coords for the map marker
+  const [coords, setCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  // ── Same GPS logic as damage.tsx ──
+  const getLocation = async () => {
+    try {
+      setGpsLoading(true);
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission denied", "Enable location services");
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({});
+
+      // ✅ Save coords for the red marker on the map
+      setCoords({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      const address = await Location.reverseGeocodeAsync(loc.coords);
+
+      if (address.length > 0) {
+        const a = address[0];
+        // Auto-fill district and village
+        if (a.subregion) setDistrict(a.subregion);
+        else if (a.city) setDistrict(a.city);
+        if (a.name || a.district) setVillage(a.name || a.district || "");
+        const place = `${a.name || ""}, ${a.city || ""}`
+          .trim()
+          .replace(/^,|,$/, "");
+        setLocationText(place);
+      } else {
+        setLocationText("Location found");
+      }
+    } catch {
+      Alert.alert("Error", "Could not get location. Try again.");
+    } finally {
+      setGpsLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
-
     if (!res.canceled) {
       setImage(res.assets[0].uri);
     }
   };
 
-  const submit = () => {
+  const submit = async () => {
+  if (!district || !village) {
+    Alert.alert("Missing Info", "Please enter district and village");
+    return;
+  }
+  try {
+    setLoading(true);
+
+    const behaviorMap: Record<string, ElephantBehavior> = {
+      Walking: "CALM",
+      Eating: "FEEDING",
+      Aggressive: "AGGRESSIVE",
+      "Crossing Road": "MOVING",
+    };
+
+    await reportService.submitSighting({
+      district,
+      village,
+      // ✅ Send GPS coords if available, otherwise undefined
+      latitude: coords?.latitude,
+      longitude: coords?.longitude,
+      numberOfElephants: count,
+      behavior: behaviorMap[behavior] ?? "CALM",
+      additionalNotes: notes,
+    });
+
     Alert.alert("Success", "Sighting Report Submitted");
     router.back();
-  };
+  } catch (error: any) {
+    Alert.alert(
+      "Error",
+      error.response?.data?.message || "Submission failed"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const clear = () => {
     setCount(1);
     setBehavior("Walking");
     setImage(null);
+    setDistrict("");
+    setVillage("");
+    setNotes("");
+    setLocationText("Tap GPS to get location");
+    setCoords(null);
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
       {/* TOP BAR */}
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </Pressable>
-
         <Text style={styles.title}>Report Sighting</Text>
-
         <Pressable onPress={() => router.back()}>
           <Text style={styles.cancel}>Cancel</Text>
         </Pressable>
       </View>
 
-      {/* LOCATION */}
+      {/* ── LOCATION SECTION ── */}
       <Text style={styles.section}>Location</Text>
 
+      {/* ✅ Real map — shows red marker when GPS is tapped */}
       <View style={styles.mapBox}>
-        <View style={styles.mapDot} />
+        {coords ? (
+          <MapView
+            style={styles.map}
+            region={{
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              latitudeDelta: 0.008,
+              longitudeDelta: 0.008,
+            }}
+            scrollEnabled={false}
+            zoomEnabled={false}
+          >
+            {/* 🔴 Red marker at sighting location */}
+            <Marker
+              coordinate={{
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+              }}
+              title="Sighting Location"
+              description={locationText}
+            >
+              <View style={styles.redMarker} />
+            </Marker>
+          </MapView>
+        ) : (
+          // Placeholder before GPS is tapped
+          <View style={styles.mapPlaceholder}>
+            <MaterialIcons name="map" size={36} color="#2d4a34" />
+            <Text style={styles.mapPlaceholderText}>
+              Tap GPS to show location on map
+            </Text>
+          </View>
+        )}
+      </View>
 
-        <Pressable style={styles.gpsBtn}>
-          <MaterialIcons name="my-location" size={18} color="white" />
+      {/* District input */}
+      <View style={styles.inputRow}>
+        <MaterialIcons name="location-pin" size={20} color="#9ca3af" />
+        <TextInput
+          placeholder="District (e.g. Dambulla)"
+          placeholderTextColor="#6b7280"
+          value={district}
+          onChangeText={setDistrict}
+          style={styles.inputText}
+        />
+      </View>
+
+      {/* Village input */}
+      <View style={[styles.inputRow, { marginTop: 8 }]}>
+        <MaterialIcons name="location-city" size={20} color="#9ca3af" />
+        <TextInput
+          placeholder="Village (e.g. Sigiriya)"
+          placeholderTextColor="#6b7280"
+          value={village}
+          onChangeText={setVillage}
+          style={styles.inputText}
+        />
+      </View>
+
+      {/* GPS auto-fill row — same as damage.tsx */}
+      <View style={[styles.inputRow, { marginTop: 8 }]}>
+        <MaterialIcons name="my-location" size={20} color="#9ca3af" />
+        <Text style={{ color: "#9ca3af", flex: 1, marginLeft: 8, fontSize: 13 }}>
+          {locationText}
+        </Text>
+        <Pressable onPress={getLocation} disabled={gpsLoading}>
+          {gpsLoading ? (
+            <ActivityIndicator size="small" color="#13ec37" />
+          ) : (
+            <Text style={styles.gpsBadge}>GPS</Text>
+          )}
         </Pressable>
       </View>
 
-      <View style={styles.addressBox}>
-        <MaterialIcons name="location-pin" size={18} color="#9ca3af" />
-        <Text style={styles.address}>Sigiriya Rd, Dambulla</Text>
-        <Text style={styles.gpsBadge}>GPS</Text>
-      </View>
-
-      {/* ANIMALS */}
+      {/* ── ANIMALS SECTION ── */}
       <Text style={styles.section}>The Animals</Text>
-
       <Text style={styles.label}>HOW MANY ELEPHANTS?</Text>
 
       <View style={styles.counter}>
         <Pressable onPress={() => setCount(Math.max(1, count - 1))}>
           <Text style={styles.minus}>-</Text>
         </Pressable>
-
         <Text style={styles.count}>{count}</Text>
-
         <Pressable onPress={() => setCount(count + 1)}>
           <Text style={styles.plus}>+</Text>
         </Pressable>
@@ -95,16 +248,10 @@ export default function SightingReport() {
           <Pressable
             key={item}
             onPress={() => setBehavior(item)}
-            style={[
-              styles.tag,
-              behavior === item && styles.activeTag,
-            ]}
+            style={[styles.tag, behavior === item && styles.activeTag]}
           >
             <Text
-              style={[
-                styles.tagText,
-                behavior === item && { color: "black" },
-              ]}
+              style={[styles.tagText, behavior === item && { color: "black" }]}
             >
               {item}
             </Text>
@@ -112,9 +259,19 @@ export default function SightingReport() {
         ))}
       </View>
 
-      {/* EVIDENCE */}
-      <Text style={styles.section}>Evidence</Text>
+      {/* ── ADDITIONAL NOTES ── */}
+      <Text style={styles.section}>Additional Notes</Text>
+      <TextInput
+        placeholder="Any extra details..."
+        placeholderTextColor="#9ca3af"
+        value={notes}
+        onChangeText={setNotes}
+        multiline
+        style={styles.notesInput}
+      />
 
+      {/* ── EVIDENCE ── */}
+      <Text style={styles.section}>Evidence</Text>
       <Pressable style={styles.uploadBox} onPress={pickImage}>
         {image ? (
           <Image source={{ uri: image }} style={styles.preview} />
@@ -126,18 +283,22 @@ export default function SightingReport() {
         )}
       </Pressable>
 
-      {/* BUTTONS */}
+      {/* ── BUTTONS ── */}
       <View style={styles.buttonRow}>
         <Pressable style={styles.clearBtn} onPress={clear}>
           <Text style={styles.clearText}>Clear</Text>
         </Pressable>
 
-        <Pressable style={styles.submitBtn} onPress={submit}>
-          <Text style={styles.submitText}>Submit</Text>
+        <Pressable style={styles.submitBtn} onPress={submit} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="black" />
+          ) : (
+            <Text style={styles.submitText}>Submit</Text>
+          )}
         </Pressable>
       </View>
 
-    </View>
+    </ScrollView>
   );
 }
 
@@ -152,6 +313,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 10,
   },
 
   title: {
@@ -171,54 +333,74 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
+  // ── Map ──
   mapBox: {
-    height: 140,
-    backgroundColor: "#1c3020",
+    height: 160,
     borderRadius: 12,
     marginTop: 10,
+    overflow: "hidden",
+    backgroundColor: "#1c3020",
+  },
+
+  map: {
+    flex: 1,
+  },
+
+  mapPlaceholder: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    gap: 8,
   },
 
-  mapDot: {
-    width: 12,
-    height: 12,
-    backgroundColor: "#13ec37",
-    borderRadius: 6,
+  mapPlaceholderText: {
+    color: "#4a6650",
+    fontSize: 13,
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
 
-  gpsBtn: {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
-    backgroundColor: "#1c3020",
-    padding: 8,
-    borderRadius: 20,
+  // 🔴 Red dot marker
+  redMarker: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#ef4444",
+    borderWidth: 2.5,
+    borderColor: "white",
+    shadowColor: "#ef4444",
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 5,
   },
 
-  addressBox: {
+  // ── Inputs ──
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#1c3020",
-    padding: 10,
+    padding: 12,
     borderRadius: 10,
     marginTop: 10,
   },
 
-  address: {
+  inputText: {
     color: "white",
-    marginLeft: 5,
     flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
   },
 
   gpsBadge: {
-    backgroundColor: "#13ec37",
-    color: "black",
-    paddingHorizontal: 6,
-    borderRadius: 6,
-    fontSize: 12,
+    color: "#13ec37",
+    fontWeight: "bold",
+    backgroundColor: "#0d2211",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 
+  // ── Animals ──
   label: {
     color: "#9ca3af",
     fontSize: 12,
@@ -235,20 +417,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  minus: {
-    color: "#9ca3af",
-    fontSize: 22,
-  },
-
-  plus: {
-    color: "#13ec37",
-    fontSize: 22,
-  },
-
-  count: {
-    color: "white",
-    fontSize: 20,
-  },
+  minus: { color: "#9ca3af", fontSize: 22 },
+  plus: { color: "#13ec37", fontSize: 22 },
+  count: { color: "white", fontSize: 20 },
 
   tags: {
     flexDirection: "row",
@@ -270,10 +441,21 @@ const styles = StyleSheet.create({
     borderColor: "#13ec37",
   },
 
-  tagText: {
-    color: "#9ca3af",
+  tagText: { color: "#9ca3af" },
+
+  // ── Notes ──
+  notesInput: {
+    backgroundColor: "#1c3020",
+    color: "white",
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 10,
+    height: 90,
+    textAlignVertical: "top",
+    fontSize: 14,
   },
 
+  // ── Evidence ──
   uploadBox: {
     marginTop: 10,
     borderWidth: 2,
@@ -285,10 +467,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  uploadText: {
-    color: "#9ca3af",
-    marginTop: 5,
-  },
+  uploadText: { color: "#9ca3af", marginTop: 5 },
 
   preview: {
     width: "100%",
@@ -296,10 +475,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
+  // ── Buttons ──
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 20,
+    marginBottom: 40,
     gap: 10,
   },
 
@@ -311,10 +492,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  submitText: {
-    color: "black",
-    fontWeight: "bold",
-  },
+  submitText: { color: "black", fontWeight: "bold" },
 
   clearBtn: {
     flex: 1,
@@ -325,8 +503,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  clearText: {
-    color: "#ef4444",
-    fontWeight: "bold",
-  },
+  clearText: { color: "#ef4444", fontWeight: "bold" },
 });
