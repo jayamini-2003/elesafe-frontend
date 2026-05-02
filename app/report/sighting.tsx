@@ -4,6 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useState } from "react";
+import { uploadReportImage } from '../../services/supabase';
 import {
   ActivityIndicator,
   Alert,
@@ -93,6 +94,12 @@ export default function SightingReport() {
   try {
     setLoading(true);
 
+    // ✅ Upload image to Supabase first if one was picked
+    let imageUrl: string | undefined = undefined;
+    if (image) {
+      imageUrl = await uploadReportImage('sighting', image);
+    }
+
     const behaviorMap: Record<string, ElephantBehavior> = {
       Walking: "CALM",
       Eating: "FEEDING",
@@ -103,25 +110,24 @@ export default function SightingReport() {
     await reportService.submitSighting({
       district,
       village,
-      // ✅ Send GPS coords if available, otherwise undefined
       latitude: coords?.latitude,
       longitude: coords?.longitude,
       numberOfElephants: count,
       behavior: behaviorMap[behavior] ?? "CALM",
       additionalNotes: notes,
+      // ✅ Pass Supabase URL to backend
+      imagePath: imageUrl,
     });
 
     Alert.alert("Success", "Sighting Report Submitted");
     router.back();
   } catch (error: any) {
-    Alert.alert(
-      "Error",
-      error.response?.data?.message || "Submission failed"
-    );
+    Alert.alert("Error", error.response?.data?.message || "Submission failed");
   } finally {
     setLoading(false);
   }
 };
+
 
   const clear = () => {
     setCount(1);

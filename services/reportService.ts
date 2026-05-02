@@ -7,12 +7,13 @@ export type DamageType = 'CROP' | 'PROPERTY' | 'VEHICLE' | 'HUMAN_INJURY';
 export interface SightingPayload {
   district: string;
   village: string;
-  // ✅ ADD THESE TWO
   latitude?: number;
   longitude?: number;
   numberOfElephants: number;
   behavior: ElephantBehavior;
   additionalNotes?: string;
+  // ✅ ADD THIS
+  imagePath?: string;
 }
 
 export interface DamagePayload {
@@ -20,6 +21,7 @@ export interface DamagePayload {
   village: string;
   damageType: DamageType;
   description: string;
+  // already existed
   imagePath?: string;
 }
 

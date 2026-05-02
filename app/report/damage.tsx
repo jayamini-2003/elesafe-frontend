@@ -4,6 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useState } from "react";
+import { uploadReportImage } from '../../services/supabase';
 import {
   ActivityIndicator,
   Alert,
@@ -74,49 +75,53 @@ export default function DamageReport() {
   };
 
   const submit = async () => {
-    if (!district) {
-      Alert.alert("Missing Info", "Please enter district");
-      return;
+  if (!district) {
+    Alert.alert("Missing Info", "Please enter district");
+    return;
+  }
+  if (!village) {
+    Alert.alert("Missing Info", "Please enter village");
+    return;
+  }
+  if (selectedTypes.length === 0) {
+    Alert.alert("Missing Info", "Please select at least one damage type");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // ✅ Upload image to Supabase first if one was picked
+    let imageUrl: string | undefined = undefined;
+    if (image) {
+      imageUrl = await uploadReportImage('damage', image);
     }
-    if (!village) {
-      Alert.alert("Missing Info", "Please enter village");
-      return;
-    }
-    if (selectedTypes.length === 0) {
-      Alert.alert("Missing Info", "Please select at least one damage type");
-      return;
-    }
 
-    try {
-      setLoading(true);
+    const damageTypeMap: Record<string, DamageType> = {
+      "Property Damage": "PROPERTY",
+      "Crop / Field Damage": "CROP",
+      "Fence Damage": "PROPERTY",
+      "Vehicle Damage": "VEHICLE",
+    };
 
-      const damageTypeMap: Record<string, DamageType> = {
-        'Property Damage': 'PROPERTY',
-        'Crop / Field Damage': 'CROP',
-        'Fence Damage': 'PROPERTY',   // no FENCE in backend, maps to PROPERTY
-        'Vehicle Damage': 'VEHICLE',
-      };
+    await reportService.submitDamage({
+      district,
+      village,
+      damageType: damageTypeMap[selectedTypes[0]],
+      description,
+      // ✅ Pass Supabase URL to backend
+      imagePath: imageUrl,
+    });
 
+    Alert.alert("Submitted", "Damage report sent successfully");
+    router.back();
+  } catch (error: any) {
+    Alert.alert("Error", error.response?.data?.message || "Submission failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
-      await reportService.submitDamage({
-        district,
-        village,
-        damageType: damageTypeMap[selectedTypes[0]],
-        description,
-        imagePath: image ?? undefined,
-      });
-
-      Alert.alert("Submitted", "Damage report sent successfully");
-      router.back();
-    } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Submission failed"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const clear = () => {
     setSelectedTypes([]);
