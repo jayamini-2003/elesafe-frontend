@@ -1,255 +1,236 @@
 // app/(tabs)/report.tsx
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
 import {
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
+  Pressable,
   View,
 } from "react-native";
 
-const REPORT_TYPES = [
-  {
-    id: "sighting",
-    route: "/report/sighting",
-    title: "Elephant Sighting",
-    subtitle: "Spotted elephants nearby?",
-    description: "Report presence, movement or behavior of elephants in your area.",
-    icon: "elephant",
-    iconLib: "community",
-    accentColor: "#13ec37",
-    bgColor: "#0d2a12",
-    borderColor: "#13ec3733",
-    tag: "Most Common",
-    tagColor: "#13ec37",
-    stats: [
-      { label: "Quick", icon: "flash-on" },
-      { label: "GPS", icon: "location-on" },
-      { label: "Photo", icon: "camera-alt" },
-    ],
-  },
-  {
-    id: "damage",
-    route: "/report/damage",
-    title: "Damage Report",
-    subtitle: "Property or crop damage?",
-    description: "Report damage to property, crops, fences or vehicles caused by elephants.",
-    icon: "home-alert",
-    iconLib: "community",
-    accentColor: "#ef4444",
-    bgColor: "#2a0d0d",
-    borderColor: "#ef444433",
-    tag: "Urgent",
-    tagColor: "#ef4444",
-    stats: [
-      { label: "Evidence", icon: "camera-alt" },
-      { label: "Location", icon: "location-on" },
-      { label: "Type", icon: "category" },
-    ],
-  },
-];
-
 export default function ReportTab() {
-  const [pressing, setPressing] = useState<string | null>(null);
-
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
+
       {/* ── HEADER ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Report Incident</Text>
+        <Text style={styles.headerEyebrow}>ELESAFE LANKA</Text>
+        <Text style={styles.headerTitle}>Report{"\n"}Incident</Text>
         <Text style={styles.headerSub}>
-          Help protect your community by reporting elephant activity
+          Select the type of incident to report
         </Text>
       </View>
 
-      {/* ── ALERT BANNER ── */}
-      <View style={styles.alertBanner}>
-        <MaterialIcons name="info-outline" size={16} color="#f59e0b" />
-        <Text style={styles.alertText}>
-          Reports are reviewed by wildlife officers within 24 hours
-        </Text>
-      </View>
+      <View style={styles.divider} />
 
-      {/* ── REPORT CARDS ── */}
+      {/* ── CARDS ── */}
       <View style={styles.cardGrid}>
-        {REPORT_TYPES.map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => router.push(item.route as any)}
-            onPressIn={() => setPressing(item.id)}
-            onPressOut={() => setPressing(null)}
-            style={[
-              styles.card,
-              {
-                backgroundColor: item.bgColor,
-                borderColor: pressing === item.id ? item.accentColor : item.borderColor,
-                borderWidth: pressing === item.id ? 2 : 1,
-              },
-            ]}
-          >
-            {/* Tag */}
-            <View style={[styles.tag, { backgroundColor: item.accentColor + "22", borderColor: item.accentColor + "55" }]}>
-              <Text style={[styles.tagText, { color: item.accentColor }]}>
-                {item.tag}
-              </Text>
+
+        {/* ── SIGHTING CARD ── */}
+        <View style={[styles.card, styles.cardSighting]}>
+          {/* Left accent bar */}
+          <View style={[styles.accentBar, { backgroundColor: "#13ec37" }]} />
+
+          <View style={styles.cardInner}>
+            {/* Top row */}
+            <View style={styles.cardTopRow}>
+              <View style={[styles.iconBox, { backgroundColor: "#13ec3722" }]}>
+                <MaterialCommunityIcons name="elephant" size={32} color="#13ec37" />
+              </View>
+              <View style={[styles.tagBadge, { backgroundColor: "#13ec3722", borderColor: "#13ec3755" }]}>
+                <View style={[styles.tagDot, { backgroundColor: "#13ec37" }]} />
+                <Text style={[styles.tagLabel, { color: "#13ec37" }]}>SIGHTING</Text>
+              </View>
             </View>
 
-            {/* Icon */}
-            <View style={[styles.iconCircle, { backgroundColor: item.accentColor + "18" }]}>
-              <MaterialCommunityIcons
-                name={item.icon as any}
-                size={44}
-                color={item.accentColor}
-              />
-            </View>
-
-            {/* Text */}
-            <Text style={[styles.cardTitle, { color: item.accentColor }]}>
-              {item.title}
+            {/* Title + desc */}
+            <Text style={[styles.cardTitle, { color: "#13ec37" }]}>
+              Elephant Sighting
             </Text>
-            <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-            <Text style={styles.cardDesc}>{item.description}</Text>
+            <Text style={styles.cardDesc}>
+              Report elephant presence, movement or behavior in your area.
+            </Text>
 
-            {/* Feature pills */}
-            <View style={styles.pillRow}>
-              {item.stats.map((s) => (
-                <View key={s.label} style={[styles.pill, { borderColor: item.accentColor + "44" }]}>
-                  <MaterialIcons name={s.icon as any} size={11} color={item.accentColor} />
-                  <Text style={[styles.pillText, { color: item.accentColor }]}>{s.label}</Text>
+            {/* Pills */}
+            <View style={styles.pillsRow}>
+              {["📍 Location", "📷 Photo", "⚡ Quick"].map((p) => (
+                <View key={p} style={[styles.pill, { borderColor: "#13ec3744" }]}>
+                  <Text style={[styles.pillText, { color: "#13ec37" }]}>{p}</Text>
                 </View>
               ))}
             </View>
 
-            {/* Arrow button */}
-            <View style={[styles.arrowBtn, { backgroundColor: item.accentColor }]}>
-              <Text style={styles.arrowBtnText}>Start Report</Text>
-              <MaterialIcons name="arrow-forward" size={16} color="black" />
-            </View>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* ── QUICK TIPS ── */}
-      <View style={styles.tipsBox}>
-        <Text style={styles.tipsTitle}>📋 Before you report</Text>
-        {[
-          "Stay at a safe distance from elephants",
-          "Enable GPS for accurate location",
-          "Take a photo as evidence if safe to do so",
-          "Add as many details as possible",
-        ].map((tip, i) => (
-          <View key={i} style={styles.tipRow}>
-            <View style={styles.tipDot} />
-            <Text style={styles.tipText}>{tip}</Text>
+            {/* ✅ Only the button is pressable */}
+            <Pressable
+              onPress={() => router.push("/report/sighting")}
+              style={({ pressed }) => [
+                styles.cardBtn,
+                { backgroundColor: pressed ? "#0fbc2c" : "#13ec37" },
+              ]}
+            >
+              <Text style={[styles.cardBtnText, { color: "#0a1a0d" }]}>
+                Start Sighting Report
+              </Text>
+              <MaterialIcons name="arrow-forward" size={16} color="#0a1a0d" />
+            </Pressable>
           </View>
-        ))}
+        </View>
+
+        {/* ── DAMAGE CARD ── */}
+        <View style={[styles.card, styles.cardDamage]}>
+          {/* Left accent bar */}
+          <View style={[styles.accentBar, { backgroundColor: "#ef4444" }]} />
+
+          <View style={styles.cardInner}>
+            {/* Top row */}
+            <View style={styles.cardTopRow}>
+              <View style={[styles.iconBox, { backgroundColor: "#ef444422" }]}>
+                <MaterialCommunityIcons name="home-alert" size={32} color="#ef4444" />
+              </View>
+              <View style={[styles.tagBadge, { backgroundColor: "#ef444422", borderColor: "#ef444455" }]}>
+                <View style={[styles.tagDot, { backgroundColor: "#ef4444" }]} />
+                <Text style={[styles.tagLabel, { color: "#ef4444" }]}>URGENT</Text>
+              </View>
+            </View>
+
+            {/* Title + desc */}
+            <Text style={[styles.cardTitle, { color: "#ef4444" }]}>
+              Damage Report
+            </Text>
+            <Text style={styles.cardDesc}>
+              Report property, crop, fence or vehicle damage caused by elephants.
+            </Text>
+
+            {/* Pills */}
+            <View style={styles.pillsRow}>
+              {["📍 Location", "📷 Evidence", "🏷️ Type"].map((p) => (
+                <View key={p} style={[styles.pill, { borderColor: "#ef444444" }]}>
+                  <Text style={[styles.pillText, { color: "#ef4444" }]}>{p}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* ✅ Only the button is pressable */}
+            <Pressable
+              onPress={() => router.push("/report/damage")}
+              style={({ pressed }) => [
+                styles.cardBtn,
+                { backgroundColor: pressed ? "#c53030" : "#ef4444" },
+              ]}
+            >
+              <Text style={[styles.cardBtnText, { color: "white" }]}>
+                Start Damage Report
+              </Text>
+              <MaterialIcons name="arrow-forward" size={16} color="white" />
+            </Pressable>
+          </View>
+        </View>
+
       </View>
 
-    </ScrollView>
+      {/* ── TIPS STRIP ── */}
+      <View style={styles.tipsStrip}>
+        <MaterialIcons name="info-outline" size={13} color="#f59e0b" />
+        <Text style={styles.tipsText}>
+          Stay safe • Enable GPS • Take photo if safe • Add full details
+        </Text>
+      </View>
+
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#102213" },
-  content: { padding: 20, paddingBottom: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: "#102213",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
 
-  // ── Header ──
-  header: { marginTop: 35, marginBottom: 16 },
+  header: { marginTop: 50, marginBottom: 16 },
+
+  headerEyebrow: {
+    color: "#13ec37", fontSize: 11,
+    fontWeight: "800", letterSpacing: 3, marginBottom: 6,
+  },
+
   headerTitle: {
-    color: "white", fontSize: 26, fontWeight: "bold",
-  },
-  headerSub: {
-    color: "#6b7280", fontSize: 13, marginTop: 4, lineHeight: 18,
+    color: "white", fontSize: 36,
+    fontWeight: "800", lineHeight: 40, letterSpacing: -0.5,
   },
 
-  // ── Alert banner ──
-  alertBanner: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "#2a1f0d", borderWidth: 1,
-    borderColor: "#f59e0b44", borderRadius: 10,
-    padding: 10, marginBottom: 20,
-  },
-  alertText: { color: "#f59e0b", fontSize: 12, flex: 1 },
+  headerSub: { color: "#4a6650", fontSize: 13, marginTop: 6 },
+
+  divider: { height: 1, backgroundColor: "#1c3020", marginBottom: 16 },
 
   // ── Cards ──
-  cardGrid: { gap: 16 },
+  cardGrid: { flex: 1, gap: 12 },
 
   card: {
-    borderRadius: 20, padding: 20,
-    borderWidth: 1,
+    flex: 1, borderRadius: 18,
+    borderWidth: 1, flexDirection: "row", overflow: "hidden",
   },
 
-  tag: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10, paddingVertical: 3,
-    borderRadius: 20, borderWidth: 1,
-    marginBottom: 14,
-  },
-  tagText: { fontSize: 11, fontWeight: "bold" },
+  cardSighting: { backgroundColor: "#0d1f10", borderColor: "#13ec3322" },
+  cardDamage:   { backgroundColor: "#1a0d0d", borderColor: "#ef444422" },
 
-  iconCircle: {
-    width: 80, height: 80, borderRadius: 40,
+  accentBar: { width: 4 },
+
+  cardInner: {
+    flex: 1, padding: 18,
+    justifyContent: "space-between",
+  },
+
+  cardTopRow: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 12,
+  },
+
+  iconBox: {
+    width: 56, height: 56, borderRadius: 16,
     justifyContent: "center", alignItems: "center",
-    marginBottom: 16, alignSelf: "center",
   },
 
-  cardTitle: {
-    fontSize: 22, fontWeight: "bold",
-    textAlign: "center",
-  },
-  cardSubtitle: {
-    color: "#9ca3af", fontSize: 13,
-    textAlign: "center", marginTop: 4,
-  },
-  cardDesc: {
-    color: "#6b7280", fontSize: 12,
-    textAlign: "center", marginTop: 8,
-    lineHeight: 18,
-  },
-
-  // Feature pills
-  pillRow: {
-    flexDirection: "row", justifyContent: "center",
-    gap: 8, marginTop: 14, flexWrap: "wrap",
-  },
-  pill: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4,
+  tagBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: 20, borderWidth: 1,
-    backgroundColor: "#ffffff08",
   },
+
+  tagDot: { width: 6, height: 6, borderRadius: 3 },
+
+  tagLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+
+  cardTitle: { fontSize: 20, fontWeight: "800", letterSpacing: -0.3, marginBottom: 6 },
+
+  cardDesc: { color: "#6b7280", fontSize: 12, lineHeight: 17, marginBottom: 12 },
+
+  pillsRow: { flexDirection: "row", gap: 6, marginBottom: 14, flexWrap: "wrap" },
+
+  pill: {
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 20, borderWidth: 1, backgroundColor: "#ffffff05",
+  },
+
   pillText: { fontSize: 10, fontWeight: "600" },
 
-  // Arrow button
-  arrowBtn: {
-    flexDirection: "row", justifyContent: "center",
-    alignItems: "center", gap: 6,
-    marginTop: 16, padding: 13, borderRadius: 12,
+  // ✅ Button — full width, centered, with press feedback
+  cardBtn: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: 8,
+    paddingVertical: 13, borderRadius: 12, width: "100%",
   },
-  arrowBtnText: { color: "black", fontWeight: "bold", fontSize: 14 },
+
+  cardBtnText: { fontWeight: "800", fontSize: 13, letterSpacing: 0.3 },
 
   // ── Tips ──
-  tipsBox: {
-    marginTop: 24, backgroundColor: "#1c3020",
-    borderRadius: 16, padding: 16,
+  tipsStrip: {
+    flexDirection: "row", alignItems: "center", gap: 7,
+    backgroundColor: "#1c1a0d", borderWidth: 1,
+    borderColor: "#f59e0b22", borderRadius: 10,
+    padding: 10, marginTop: 12,
   },
-  tipsTitle: {
-    color: "white", fontWeight: "bold",
-    fontSize: 14, marginBottom: 12,
-  },
-  tipRow: {
-    flexDirection: "row", alignItems: "flex-start",
-    gap: 10, marginBottom: 8,
-  },
-  tipDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: "#13ec37", marginTop: 5,
-  },
-  tipText: { color: "#9ca3af", fontSize: 12, flex: 1, lineHeight: 18 },
+
+  tipsText: { color: "#9a8a50", fontSize: 11, flex: 1 },
 });
