@@ -1,7 +1,8 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -10,12 +11,46 @@ import {
   Text,
   View,
 } from "react-native";
+import MapView, { Marker, Region } from "react-native-maps";
 
 export default function SightingReport() {
   const [count, setCount] = useState(1);
   const [behavior, setBehavior] = useState("Walking");
   const [image, setImage] = useState<string | null>(null);
 
+  const mapRef = useRef<MapView | null>(null);
+
+  const [region, setRegion] = useState<Region>({
+    latitude: 7.8731, // fallback Sri Lanka center
+    longitude: 80.7718,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
+
+  // 📍 GET USER LOCATION
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert("Permission denied", "Location is required");
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({});
+
+      const newRegion = {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+
+      setRegion(newRegion);
+    })();
+  }, []);
+
+  // 📸 IMAGE PICKER
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -25,6 +60,11 @@ export default function SightingReport() {
     if (!res.canceled) {
       setImage(res.assets[0].uri);
     }
+  };
+
+  // 📍 CENTER MAP AGAIN
+  const goToMyLocation = () => {
+    mapRef.current?.animateToRegion(region, 1000);
   };
 
   const submit = () => {
@@ -40,7 +80,6 @@ export default function SightingReport() {
 
   return (
     <View style={styles.container}>
-
       {/* TOP BAR */}
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()}>
@@ -57,18 +96,35 @@ export default function SightingReport() {
       {/* LOCATION */}
       <Text style={styles.section}>Location</Text>
 
+      {/* 🗺 REAL MAP BOX */}
       <View style={styles.mapBox}>
-        <View style={styles.mapDot} />
+        <MapView
+          ref={mapRef}
+          style={StyleSheet.absoluteFillObject}
+          region={region}
+          showsUserLocation={true}
+          zoomEnabled={true}
+          scrollEnabled={true}
+        >
+          {/* USER MARKER */}
+          <Marker coordinate={region}>
+            <View style={styles.userDot} />
+          </Marker>
+        </MapView>
 
-        <Pressable style={styles.gpsBtn}>
+        {/* GPS BUTTON */}
+        <Pressable style={styles.gpsBtn} onPress={goToMyLocation}>
           <MaterialIcons name="my-location" size={18} color="white" />
         </Pressable>
       </View>
 
+      {/* ADDRESS */}
       <View style={styles.addressBox}>
         <MaterialIcons name="location-pin" size={18} color="#9ca3af" />
-        <Text style={styles.address}>Sigiriya Rd, Dambulla</Text>
-        <Text style={styles.gpsBadge}>GPS</Text>
+        <Text style={styles.address}>
+          Your Current Location
+        </Text>
+        <Text style={styles.gpsBadge}>LIVE</Text>
       </View>
 
       {/* ANIMALS */}
@@ -136,7 +192,6 @@ export default function SightingReport() {
           <Text style={styles.submitText}>Submit</Text>
         </Pressable>
       </View>
-
     </View>
   );
 }
@@ -172,19 +227,11 @@ const styles = StyleSheet.create({
   },
 
   mapBox: {
-    height: 140,
+    height: 180,
     backgroundColor: "#1c3020",
     borderRadius: 12,
     marginTop: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  mapDot: {
-    width: 12,
-    height: 12,
-    backgroundColor: "#13ec37",
-    borderRadius: 6,
+    overflow: "hidden",
   },
 
   gpsBtn: {
@@ -192,8 +239,17 @@ const styles = StyleSheet.create({
     bottom: 10,
     right: 10,
     backgroundColor: "#1c3020",
-    padding: 8,
+    padding: 10,
     borderRadius: 20,
+  },
+
+  userDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#13ec37",
+    borderWidth: 2,
+    borderColor: "white",
   },
 
   addressBox: {
