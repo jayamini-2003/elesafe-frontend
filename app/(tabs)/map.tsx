@@ -121,6 +121,22 @@ export default function MapScreen() {
           </Marker>
         ))}
       </MapView>
+    <View style={{ flex: 1, backgroundColor: "#102213" }}>
+
+      {/* TOP BAR */}
+      <View style={{ padding: 15 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "#1c3020",
+            borderRadius: 12,
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            marginTop:25,
+          }}
+        >
+          <MaterialIcons name="menu" size={22} color="white" />
 
       {/* 🔍 SEARCH BAR */}
       <View style={styles.topBar}>

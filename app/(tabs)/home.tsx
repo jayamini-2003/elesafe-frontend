@@ -17,7 +17,7 @@ import MapView, { Marker } from "react-native-maps";
 
 export default function Home() {
   const user = {
-    name: "Jayamini",
+    name: "Kamal",
     location: "Pettah, Colombo",
     avatar: "https://i.pravatar.cc/100",
   };
@@ -93,18 +93,16 @@ export default function Home() {
       {/* HEADER */}
       <View style={styles.appHeader}>
         <Text style={styles.appName}>EleSafe Lanka</Text>
-        <MaterialIcons
-          name="notifications-none"
-          size={24}
-          color="white"
-        />
+       <Pressable onPress={() => router.push("/notifications")}>
+  <MaterialIcons name="notifications-none" size={24} color="white" />
+</Pressable>
       </View>
 
       {/* PROFILE */}
       <View style={styles.header}>
         <Image source={{ uri: user.avatar }} style={styles.avatar} />
 
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: 30 }}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.location}>{user.location}</Text>
 
@@ -279,7 +277,8 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 22,
     fontWeight: "bold",
-    padding: 20,
+    marginTop:25 ,
+    marginBottom:10 ,
   },
 
   header: {
