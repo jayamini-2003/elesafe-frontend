@@ -1,7 +1,7 @@
 // app/notifications.tsx
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SightingAlert, useAlertSocket } from '../hooks/useAlertSocket';
 
@@ -12,34 +12,24 @@ const BEHAVIOR_CONFIG: Record<string, { color: string; icon: string }> = {
   FEEDING:    { color: '#3b82f6', icon: 'food' },
 };
 
-function timeAgo(dt: string): string {
-  try {
-    let date: Date;
-    try {
-      const parts = JSON.parse(dt) as number[];
-      if (Array.isArray(parts)) {
-        date = new Date(parts[0], parts[1] - 1, parts[2], parts[3] ?? 0, parts[4] ?? 0);
-      } else {
-        date = new Date(dt);
-      }
-    } catch {
-      date = new Date(dt);
-    }
-
-    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  } catch {
-    return 'Just now';
-  }
+function timeAgo(receivedAt: number): string {
+  const diff = Math.floor((Date.now() - receivedAt) / 1000);
+  if (diff < 60)    return `${diff}s ago`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
 
 export default function Notifications() {
-  const { alertHistory } = useAlertSocket();
+  const { alertHistory, markAllRead, markOneRead } = useAlertSocket();
+
+  // Bell badge goes to 0 the moment user opens this screen
+  useEffect(() => {
+    markAllRead();
+  }, []);
 
   const handleAlertPress = (alert: SightingAlert) => {
+    markOneRead(alert.reportId); // safe to call even after markAllRead
     router.push({
       pathname: '/alert-detail',
       params: { alert: JSON.stringify(alert) },
@@ -54,7 +44,10 @@ export default function Notifications() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons name="arrow-back" size={22} color="white" />
         </Pressable>
-        <Text style={styles.headerTitle}>Alerts</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Alerts</Text>
+          <Text style={styles.headerSub}>Last 24 hours</Text>
+        </View>
         {alertHistory.length > 0 && (
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{alertHistory.length}</Text>
@@ -70,26 +63,16 @@ export default function Notifications() {
         renderItem={({ item }) => {
           const cfg = BEHAVIOR_CONFIG[item.behavior] ?? { color: '#9ca3af', icon: 'help-circle' };
           return (
-            <Pressable
-              style={styles.alertCard}
-              onPress={() => handleAlertPress(item)}
-            >
-              {/* Icon */}
+            <Pressable style={styles.alertCard} onPress={() => handleAlertPress(item)}>
               <View style={[styles.iconWrap, { backgroundColor: cfg.color + '22' }]}>
-                <MaterialCommunityIcons
-                  name={cfg.icon as any}
-                  size={22}
-                  color={cfg.color}
-                />
+                <MaterialCommunityIcons name={cfg.icon as any} size={22} color={cfg.color} />
               </View>
-
-              {/* Body */}
               <View style={styles.cardBody}>
                 <View style={styles.cardTopRow}>
                   <Text style={styles.cardTitle} numberOfLines={1}>
                     🐘 {item.village}, {item.district}
                   </Text>
-                  <Text style={styles.timeText}>{timeAgo(item.dateTime)}</Text>
+                  <Text style={styles.timeText}>{timeAgo(item.receivedAt)}</Text>
                 </View>
                 <Text style={styles.cardSub} numberOfLines={1}>
                   {item.numberOfElephants} elephant{item.numberOfElephants > 1 ? 's' : ''} ·{' '}
@@ -101,8 +84,6 @@ export default function Notifications() {
                   </Text>
                 ) : null}
               </View>
-
-              {/* Chevron */}
               <MaterialIcons name="chevron-right" size={20} color="#4a6650" />
             </Pressable>
           );
@@ -123,7 +104,6 @@ export default function Notifications() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#102213' },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -140,16 +120,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d2211',
     justifyContent: 'center', alignItems: 'center',
   },
-  headerTitle: { color: 'white', fontSize: 20, fontWeight: '700', flex: 1 },
+  headerTitle: { color: 'white', fontSize: 20, fontWeight: '700' },
+  headerSub:   { color: '#6b7280', fontSize: 11, marginTop: 1 },
   countBadge: {
     backgroundColor: '#ef4444',
     paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: 99, minWidth: 26, alignItems: 'center',
   },
   countText: { color: 'white', fontSize: 12, fontWeight: '700' },
-
   list: { padding: 16, gap: 10 },
-
   alertCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,7 +155,6 @@ const styles = StyleSheet.create({
   timeText: { color: '#6b7280', fontSize: 11, marginLeft: 6 },
   cardSub: { color: '#9ca3af', fontSize: 12 },
   cardNotes: { color: '#4a6650', fontSize: 11, marginTop: 2 },
-
   emptyWrap: {
     alignItems: 'center',
     paddingTop: 80,

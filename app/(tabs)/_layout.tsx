@@ -1,7 +1,22 @@
+// app/(tabs)/_layout.tsx
 import { MaterialIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+import { useAlertSocket } from "../../hooks/useAlertSocket";
+
+// Badge dot shown on the Home tab icon when there are unread alerts
+function TabBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>{count > 99 ? "99+" : count}</Text>
+    </View>
+  );
+}
 
 export default function TabLayout() {
+  const { unreadCount } = useAlertSocket();
+
   return (
     <Tabs
       screenOptions={{
@@ -19,7 +34,11 @@ export default function TabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="home" size={size} color={color} />
+            <View>
+              <MaterialIcons name="home" size={size} color={color} />
+              {/* Red badge on Home tab when there are unread alerts */}
+              <TabBadge count={unreadCount} />
+            </View>
           ),
         }}
       />
@@ -34,7 +53,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ONLY ONE REPORT TAB */}
       <Tabs.Screen
         name="report"
         options={{
@@ -67,3 +85,26 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -8,
+    backgroundColor: "#ef4444",
+    borderRadius: 99,
+    minWidth: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: "#102213",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 9,
+    fontWeight: "800",
+    lineHeight: 11,
+  },
+});

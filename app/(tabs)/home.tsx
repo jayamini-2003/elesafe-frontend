@@ -20,8 +20,17 @@ import {
   View,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
+import { useAlertSocket } from "../../hooks/useAlertSocket";
 import { authService } from "../../services/authService";
 import { uploadProfilePicture } from "../../services/supabase";
+
+function timeAgo(receivedAt: number): string {
+  const diff = Math.floor((Date.now() - receivedAt) / 1000);
+  if (diff < 60)    return `${diff}s ago`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
 
 export default function Home() {
   const [region, setRegion] = useState<any>(null);
@@ -43,6 +52,10 @@ export default function Home() {
     { id: "2", latitude: 6.9265, longitude: 79.8605, title: "Fence Damage" },
     { id: "3", latitude: 6.931, longitude: 79.864, title: "Elephant Movement" },
   ]);
+
+  // ── Live WebSocket alerts ──
+  const { alertHistory, unreadCount } = useAlertSocket();
+  const latestLiveAlert = alertHistory[0] ?? null;
 
   // ── Load stored user ──
   useEffect(() => {
@@ -196,8 +209,15 @@ export default function Home() {
       {/* ── APP HEADER ── */}
       <View style={styles.appHeader}>
         <Text style={styles.appName}>EleSafe Lanka</Text>
-        <Pressable onPress={() => router.push("/notifications")}>
+        <Pressable onPress={() => router.push("/notifications")} style={styles.bellWrap}>
           <MaterialIcons name="notifications-none" size={24} color="white" />
+          {unreadCount > 0 && (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Text>
+            </View>
+          )}
         </Pressable>
       </View>
 
@@ -297,16 +317,39 @@ export default function Home() {
       <View style={{ marginTop: 20 }}>
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>Recent Alerts</Text>
-          <Text style={styles.viewAll}>View All</Text>
+          <Pressable onPress={() => router.push("/notifications")}>
+            <Text style={styles.viewAll}>View All</Text>
+          </Pressable>
         </View>
-        <View style={styles.alertCard}>
-          <MaterialCommunityIcons name="paw" size={22} color="orange" />
-          <View style={{ marginLeft: 10, flex: 1 }}>
-            <Text style={styles.alertText}>Elephant Spotted</Text>
-            <Text style={styles.alertSub}>10m ago</Text>
+
+        {latestLiveAlert ? (
+          <Pressable
+            style={styles.alertCard}
+            onPress={() => router.push({
+              pathname: "/alert-detail",
+              params: { alert: JSON.stringify(latestLiveAlert) },
+            })}
+          >
+            <MaterialCommunityIcons name="paw" size={22} color="orange" />
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Text style={styles.alertText}>
+                🐘 {latestLiveAlert.village}, {latestLiveAlert.district}
+              </Text>
+              <Text style={styles.alertSub}>
+                {timeAgo(latestLiveAlert.receivedAt)} · {latestLiveAlert.numberOfElephants} elephant{latestLiveAlert.numberOfElephants > 1 ? "s" : ""} · {latestLiveAlert.behavior}
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={18} color="#4a6650" />
+          </Pressable>
+        ) : (
+          <View style={styles.alertCard}>
+            <MaterialCommunityIcons name="paw" size={22} color="orange" />
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Text style={styles.alertText}>No recent alerts</Text>
+              <Text style={styles.alertSub}>All clear in your area</Text>
+            </View>
           </View>
-          <Text style={styles.badge}>1.2 km</Text>
-        </View>
+        )}
       </View>
 
       {/* ── SAFETY ── */}
@@ -396,28 +439,24 @@ export default function Home() {
                 </View>
               )}
 
-              {/* Camera button — only in edit mode */}
-              {editMode && (
-                <Pressable
-                  style={styles.cameraBtn}
-                  onPress={pickAndUploadPhoto}
-                  disabled={uploadingPhoto}
-                >
-                  {uploadingPhoto ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <MaterialIcons name="camera-alt" size={16} color="white" />
-                  )}
-                </Pressable>
-              )}
+              {/* Camera button — always visible in modal so user can tap avatar to change */}
+              <Pressable
+                style={styles.cameraBtn}
+                onPress={pickAndUploadPhoto}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <MaterialIcons name="camera-alt" size={16} color="white" />
+                )}
+              </Pressable>
             </View>
 
-            {/* Upload hint */}
-            {editMode && (
-              <Text style={styles.photoHint}>
-                {uploadingPhoto ? "Uploading..." : "Tap camera to change photo"}
-              </Text>
-            )}
+            {/* Upload hint — always shown */}
+            <Text style={styles.photoHint}>
+              {uploadingPhoto ? "Uploading..." : "Tap camera to change photo"}
+            </Text>
 
             {/* Name + role */}
             <Text style={styles.profileName}>{fullName}</Text>
@@ -535,6 +574,17 @@ const styles = StyleSheet.create({
     alignItems: "center", marginTop: 35, marginBottom: 10,
   },
   appName: { color: "white", fontSize: 22, fontWeight: "bold" },
+
+  bellWrap: { position: "relative", padding: 4 },
+  bellBadge: {
+    position: "absolute", top: 0, right: 0,
+    backgroundColor: "#ef4444",
+    borderRadius: 99, minWidth: 18, height: 18,
+    justifyContent: "center", alignItems: "center",
+    paddingHorizontal: 3,
+    borderWidth: 2, borderColor: "#102213",
+  },
+  bellBadgeText: { color: "white", fontSize: 9, fontWeight: "800" },
 
   header: {
     flexDirection: "row", alignItems: "center",
