@@ -37,7 +37,15 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow EleSafe Lanka to use your location to show nearby elephant sightings."
         }
-      ]
+        
+      ],
+      [
+      "expo-image-picker",
+      {
+        "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take photos for reports.",
+        "microphonePermission": false
+      }
+    ]
     ],
     "android": {
       "config": {

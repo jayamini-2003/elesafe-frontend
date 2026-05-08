@@ -57,70 +57,97 @@ export default function DamageReport() {
     }
   };
 
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission required", "Allow gallery access");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
+  const pickImage = () => {
+    Alert.alert(
+      "Add Photo",
+      "Choose a source",
+      [
+        {
+          text: "Camera",
+          onPress: async () => {
+            const permission = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) {
+              Alert.alert("Permission required", "Allow camera access to take a photo");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              quality: 0.7,
+            });
+            if (!result.canceled) {
+              setImage(result.assets[0].uri);
+            }
+          },
+        },
+        {
+          text: "Gallery",
+          onPress: async () => {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permission.granted) {
+              Alert.alert("Permission required", "Allow gallery access to attach a photo");
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              quality: 0.7,
+            });
+            if (!result.canceled) {
+              setImage(result.assets[0].uri);
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
   };
 
   const submit = async () => {
-  if (!district) {
-    Alert.alert("Missing Info", "Please enter district");
-    return;
-  }
-  if (!village) {
-    Alert.alert("Missing Info", "Please enter village");
-    return;
-  }
-  if (selectedTypes.length === 0) {
-    Alert.alert("Missing Info", "Please select at least one damage type");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    // ✅ Upload image to Supabase first if one was picked
-    let imageUrl: string | undefined = undefined;
-    if (image) {
-      imageUrl = await uploadReportImage('damage', image);
+    if (!district) {
+      Alert.alert("Missing Info", "Please enter district");
+      return;
+    }
+    if (!village) {
+      Alert.alert("Missing Info", "Please enter village");
+      return;
+    }
+    if (selectedTypes.length === 0) {
+      Alert.alert("Missing Info", "Please select at least one damage type");
+      return;
     }
 
-    const damageTypeMap: Record<string, DamageType> = {
-      "Property Damage": "PROPERTY",
-      "Crop / Field Damage": "CROP",
-      "Fence Damage": "PROPERTY",
-      "Vehicle Damage": "VEHICLE",
-    };
+    try {
+      setLoading(true);
 
-    await reportService.submitDamage({
-      district,
-      village,
-      damageType: damageTypeMap[selectedTypes[0]],
-      description,
-      // ✅ Pass Supabase URL to backend
-      imagePath: imageUrl,
-    });
+      // ✅ Upload image to Supabase first if one was picked
+      let imageUrl: string | undefined = undefined;
+      if (image) {
+        imageUrl = await uploadReportImage('damage', image);
+      }
 
-    Alert.alert("Submitted", "Damage report sent successfully");
-    router.back();
-  } catch (error: any) {
-    Alert.alert("Error", error.response?.data?.message || "Submission failed");
-  } finally {
-    setLoading(false);
-  }
-};
+      const damageTypeMap: Record<string, DamageType> = {
+        "Property Damage": "PROPERTY",
+        "Crop / Field Damage": "CROP",
+        "Fence Damage": "PROPERTY",
+        "Vehicle Damage": "VEHICLE",
+      };
+
+      await reportService.submitDamage({
+        district,
+        village,
+        damageType: damageTypeMap[selectedTypes[0]],
+        description,
+        // ✅ Pass Supabase URL to backend
+        imagePath: imageUrl,
+      });
+
+      Alert.alert("Submitted", "Damage report sent successfully");
+      router.back();
+    } catch (error: any) {
+      Alert.alert("Error", error.response?.data?.message || "Submission failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const clear = () => {
@@ -317,7 +344,7 @@ export default function DamageReport() {
             <>
               <MaterialIcons name="add-a-photo" size={30} color="#13ec37" />
               <Text style={{ color: "#9ca3af", marginTop: 10 }}>
-                Tap to upload media
+                Tap to take photo or upload from gallery
               </Text>
             </>
           )}

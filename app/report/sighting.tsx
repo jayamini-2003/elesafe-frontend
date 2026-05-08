@@ -60,20 +60,49 @@ export default function SightingReport() {
   };
 
   // ✅ Fixed: permission check was missing — this caused the picker to silently fail
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission required", "Allow gallery access to attach a photo");
-      return;
-    }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    });
-    if (!res.canceled) {
-      setImage(res.assets[0].uri);
-    }
-  };
+  const pickImage = () => {
+  Alert.alert(
+    "Add Photo",
+    "Choose a source",
+    [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) {
+            Alert.alert("Permission required", "Allow camera access to take a photo");
+            return;
+          }
+          const res = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.7,
+          });
+          if (!res.canceled) {
+            setImage(res.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: "Gallery",
+        onPress: async () => {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) {
+            Alert.alert("Permission required", "Allow gallery access to attach a photo");
+            return;
+          }
+          const res = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.7,
+          });
+          if (!res.canceled) {
+            setImage(res.assets[0].uri);
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]
+  );
+};
 
   const submit = async () => {
     if (!district || !village) {
@@ -244,7 +273,7 @@ export default function SightingReport() {
         ) : (
           <>
             <MaterialIcons name="add-a-photo" size={30} color="#13ec37" />
-            <Text style={styles.uploadText}>Tap to upload photo</Text>
+            <Text style={styles.uploadText}>Tap to take photo or upload from gallery</Text>
           </>
         )}
       </Pressable>
