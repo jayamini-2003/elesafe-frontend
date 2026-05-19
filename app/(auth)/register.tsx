@@ -1,7 +1,7 @@
 // app/(auth)/register.tsx
 import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   ImageBackground,
@@ -14,6 +14,35 @@ import {
 } from "react-native";
 import { authService } from "../../services/authService";
 
+// ─── All 25 Sri Lankan districts ────────────────────────────────────────────
+const SRI_LANKA_DISTRICTS = [
+  "Ampara",
+  "Anuradhapura",
+  "Badulla",
+  "Batticaloa",
+  "Colombo",
+  "Galle",
+  "Gampaha",
+  "Hambantota",
+  "Jaffna",
+  "Kalutara",
+  "Kandy",
+  "Kegalle",
+  "Kilinochchi",
+  "Kurunegala",
+  "Mannar",
+  "Matale",
+  "Matara",
+  "Moneragala",
+  "Mullaitivu",
+  "Nuwara Eliya",
+  "Polonnaruwa",
+  "Puttalam",
+  "Ratnapura",
+  "Trincomalee",
+  "Vavuniya",
+];
+
 export default function RegisterScreen() {
   const [form, setForm] = useState({
     nic: "",
@@ -25,6 +54,7 @@ export default function RegisterScreen() {
     password: "",
     address: "",
     village: "",
+    district: "" as string,
     role: "" as string,
     badgeNumber: "",
     station: "",
@@ -42,6 +72,10 @@ export default function RegisterScreen() {
       setError("Please fill all required fields");
       return;
     }
+    if (!form.district) {
+      setError("Please select your district");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -55,6 +89,7 @@ export default function RegisterScreen() {
         password: form.password,
         address: form.address,
         village: form.village,
+        district: form.district,
         // ✅ Map display value to backend enum
         role: form.role === "Wild Officer" ? "WILD_OFFICER" : "USER",
       };
@@ -146,6 +181,22 @@ export default function RegisterScreen() {
         <TextInput style={styles.input} placeholder="Enter Village"
           placeholderTextColor="#888" value={form.village}
           onChangeText={(v) => handleChange("village", v)} />
+
+        {/* ✅ District dropdown — all 25 Sri Lankan districts */}
+        <Text style={styles.label}>DISTRICT</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={form.district}
+            onValueChange={(v) => handleChange("district", v)}
+            dropdownIconColor="#00ff66"
+            style={{ color: form.district ? "#fff" : "#888" }}
+          >
+            <Picker.Item label="Select District" value="" color="#888" />
+            {SRI_LANKA_DISTRICTS.map((d) => (
+              <Picker.Item key={d} label={d} value={d} color="#000000" />
+            ))}
+          </Picker>
+        </View>
 
         <Text style={styles.label}>ROLE</Text>
         <View style={styles.pickerContainer}>
