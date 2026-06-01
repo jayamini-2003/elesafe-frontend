@@ -6,7 +6,7 @@ import axios from 'axios';
 // Use http://10.0.2.2:8080 for Android emulator
 // Use http://localhost:8080 for iOS simulator
 // Use http://YOUR_PC_IP:8080 for physical device (e.g. http://192.168.1.5:8080)
-export const BASE_URL = 'http://10.198.206.232:8080';
+export const BASE_URL = 'http://10.190.38.232:8080';
 
 const api = axios.create({
   baseURL: BASE_URL,

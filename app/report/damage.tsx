@@ -1,6 +1,8 @@
 // app/report/damage.tsx
+import { Picker } from "@react-native-picker/picker";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { theme } from "../../constants/theme";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -11,44 +13,55 @@ import {
   Image,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { reportService, DamageType } from "../../services/reportService";
+import { fontSize, fontFamily, spacing, vs } from "../../utils/responsive";
+import AppHeader from "../../components/AppHeader";
+
+const C = theme.colors;
+
+const SRI_LANKA_DISTRICTS = [
+  "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle", "Gampaha",
+  "Hambantota", "Jaffna", "Kalutara", "Kandy", "Kegalle", "Kilinochchi", "Kurunegala",
+  "Mannar", "Matale", "Matara", "Moneragala", "Mullaitivu", "Nuwara Eliya",
+  "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
+];
+
+function matchDistrict(value: string): string {
+  if (!value) return "";
+  const normalized = value.replace(/\s+district$/i, "").trim();
+  return SRI_LANKA_DISTRICTS.find((d) => d.toLowerCase() === normalized.toLowerCase()) ?? "";
+}
 
 export default function DamageReport() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [description, setDescription] = useState("");
-  const [image, setImage] = useState<string | null>(null);
-  const [locationText, setLocationText] = useState("Tap GPS to get location");
-  const [district, setDistrict] = useState("");
-  const [village, setVillage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [description, setDescription]     = useState("");
+  const [image, setImage]                 = useState<string | null>(null);
+  const [locationText, setLocationText]   = useState("Tap GPS to get location");
+  const [district, setDistrict]           = useState("");
+  const [village, setVillage]             = useState("");
+  const [loading, setLoading]             = useState(false);
+  const [focusedField, setFocusedField]   = useState<string | null>(null);
 
   const toggleType = (type: string) => {
-    if (selectedTypes.includes(type)) {
-      setSelectedTypes(selectedTypes.filter((t) => t !== type));
-    } else {
-      setSelectedTypes([...selectedTypes, type]);
-    }
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
   };
 
   const getLocation = async () => {
     const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission denied", "Enable location services");
-      return;
-    }
-
+    if (!permission.granted) { Alert.alert("Permission denied", "Enable location services"); return; }
     const loc = await Location.getCurrentPositionAsync({});
     const address = await Location.reverseGeocodeAsync(loc.coords);
-
     if (address.length > 0) {
       const a = address[0];
-      // Auto-fill district and village from GPS
-      if (a.city) setDistrict(a.city);
-      if (a.subregion) setDistrict(a.subregion);
+      if (a.subregion) setDistrict(matchDistrict(a.subregion));
+      else if (a.city) setDistrict(matchDistrict(a.city));
       if (a.name || a.district) setVillage(a.name || a.district || "");
       const place = `${a.name || ""}, ${a.city || ""}`.trim().replace(/^,|,$/, "");
       setLocationText(place);
@@ -58,88 +71,48 @@ export default function DamageReport() {
   };
 
   const pickImage = () => {
-    Alert.alert(
-      "Add Photo",
-      "Choose a source",
-      [
-        {
-          text: "Camera",
-          onPress: async () => {
-            const permission = await ImagePicker.requestCameraPermissionsAsync();
-            if (!permission.granted) {
-              Alert.alert("Permission required", "Allow camera access to take a photo");
-              return;
-            }
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.7,
-            });
-            if (!result.canceled) {
-              setImage(result.assets[0].uri);
-            }
-          },
+    Alert.alert("Add Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) { Alert.alert("Permission required", "Allow camera access to take a photo"); return; }
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+          if (!result.canceled) setImage(result.assets[0].uri);
         },
-        {
-          text: "Gallery",
-          onPress: async () => {
-            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (!permission.granted) {
-              Alert.alert("Permission required", "Allow gallery access to attach a photo");
-              return;
-            }
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.7,
-            });
-            if (!result.canceled) {
-              setImage(result.assets[0].uri);
-            }
-          },
+      },
+      {
+        text: "Gallery",
+        onPress: async () => {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) { Alert.alert("Permission required", "Allow gallery access to attach a photo"); return; }
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+          if (!result.canceled) setImage(result.assets[0].uri);
         },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const submit = async () => {
-    if (!district) {
-      Alert.alert("Missing Info", "Please enter district");
-      return;
-    }
-    if (!village) {
-      Alert.alert("Missing Info", "Please enter village");
-      return;
-    }
-    if (selectedTypes.length === 0) {
-      Alert.alert("Missing Info", "Please select at least one damage type");
-      return;
-    }
-
+    if (!district)               { Alert.alert("Missing Info", "Please select district"); return; }
+    if (!village)                { Alert.alert("Missing Info", "Please enter village"); return; }
+    if (selectedTypes.length === 0) { Alert.alert("Missing Info", "Please select at least one damage type"); return; }
     try {
       setLoading(true);
-
-      // ✅ Upload image to Supabase first if one was picked
       let imageUrl: string | undefined = undefined;
-      if (image) {
-        imageUrl = await uploadReportImage('damage', image);
-      }
-
+      if (image) imageUrl = await uploadReportImage('damage', image);
       const damageTypeMap: Record<string, DamageType> = {
-        "Property Damage": "PROPERTY",
-        "Crop / Field Damage": "CROP",
-        "Fence Damage": "PROPERTY",
-        "Vehicle Damage": "VEHICLE",
+        "Property Damage":    "PROPERTY",
+        "Crop / Field Damage":"CROP",
+        "Fence Damage":       "PROPERTY",
+        "Vehicle Damage":     "VEHICLE",
       };
-
       await reportService.submitDamage({
-        district,
-        village,
+        district, village,
         damageType: damageTypeMap[selectedTypes[0]],
-        description,
-        // ✅ Pass Supabase URL to backend
-        imagePath: imageUrl,
+        description, imagePath: imageUrl,
       });
-
       Alert.alert("Submitted", "Damage report sent successfully");
       router.back();
     } catch (error: any) {
@@ -149,241 +122,153 @@ export default function DamageReport() {
     }
   };
 
-
   const clear = () => {
-    setSelectedTypes([]);
-    setDescription("");
-    setImage(null);
-    setDistrict("");
-    setVillage("");
-    setLocationText("Tap GPS to get location");
+    setSelectedTypes([]); setDescription(""); setImage(null);
+    setDistrict(""); setVillage(""); setLocationText("Tap GPS to get location");
   };
 
+  const DAMAGE_TYPES = ["Property Damage", "Crop / Field Damage", "Fence Damage", "Vehicle Damage"];
+
+  const fieldStyle = (field: string) => ({
+    borderColor: focusedField === field ? C.primary : C.border,
+    backgroundColor: focusedField === field ? C.surface : C.bgSubtle,
+  });
+
   return (
-    <View style={{ flex: 1, backgroundColor: "#102213" }}>
+    <View style={styles.screen}>
+      <AppHeader
+        title="Report Damage"
+        subtitle="Property / crop damage"
+        mode="back"
+        rightIcon="close"
+        rightIconColor={C.danger}
+        onRightPress={clear}
+      />
 
-      {/* TOP BAR */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: 20,
-          paddingTop: 40,
-        }}
-      >
-        <Pressable onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={26} color="white" />
-        </Pressable>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
-          Report Damage
-        </Text>
+        {/* ── LOCATION CARD ── */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionLabel}>LOCATION</Text>
+          </View>
 
-        <Pressable onPress={clear}>
-          <Text style={{ color: "#6b7280" }}>Cancel</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 50 }}>
-
-        {/* ── LOCATION SECTION ── */}
-        <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
-          Location
-        </Text>
-
-        {/* District input */}
-        <View style={inputRow}>
-          <MaterialIcons name="location-pin" size={20} color="#9ca3af" />
-          <TextInput
-            placeholder="District (e.g. Dambulla)"
-            placeholderTextColor="#6b7280"
-            value={district}
-            onChangeText={setDistrict}
-            style={inputText}
-          />
-        </View>
-
-        {/* Village input */}
-        <View style={[inputRow, { marginTop: 8 }]}>
-          <MaterialIcons name="location-city" size={20} color="#9ca3af" />
-          <TextInput
-            placeholder="Village (e.g. Sigiriya)"
-            placeholderTextColor="#6b7280"
-            value={village}
-            onChangeText={setVillage}
-            style={inputText}
-          />
-        </View>
-
-        {/* GPS auto-fill row */}
-        <View style={[inputRow, { marginTop: 8 }]}>
-          <MaterialIcons name="my-location" size={20} color="#9ca3af" />
-          <Text style={{ color: "#9ca3af", flex: 1, marginLeft: 8, fontSize: 13 }}>
-            {locationText}
-          </Text>
-          <Pressable onPress={getLocation}>
-            <Text
-              style={{
-                color: "#13ec37",
-                fontWeight: "bold",
-                backgroundColor: "#0d2211",
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 8,
-              }}
+          <View style={[styles.pickerField, district ? styles.pickerFieldFilled : null]}>
+            <MaterialIcons name="location-pin" size={18} color={district ? C.primary : C.textMuted} />
+            <Picker
+              selectedValue={district}
+              onValueChange={setDistrict}
+              style={styles.picker}
+              dropdownIconColor={C.primary}
             >
-              GPS
-            </Text>
-          </Pressable>
-        </View>
+              <Picker.Item label="Select District" value="" color={C.textMuted} />
+              {SRI_LANKA_DISTRICTS.map((d) => (
+                <Picker.Item key={d} label={d} value={d} color={C.text} />
+              ))}
+            </Picker>
+          </View>
 
-        {/* ── DAMAGE TYPES SECTION ── */}
-        <Text
-          style={{
-            color: "white",
-            fontSize: 18,
-            fontWeight: "bold",
-            marginTop: 24,
-          }}
-        >
-          What kind of damage?
-        </Text>
-
-        {[
-          "Property Damage",
-          "Crop / Field Damage",
-          "Fence Damage",
-          "Vehicle Damage",
-        ].map((type) => {
-          const selected = selectedTypes.includes(type);
-          return (
-            <Pressable
-              key={type}
-              onPress={() => toggleType(type)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                padding: 15,
-                backgroundColor: "#1c3020",
-                borderRadius: 12,
-                marginTop: 10,
-                borderWidth: 1,
-                borderColor: selected ? "#13ec37" : "#2d4a34",
-              }}
-            >
-              <MaterialIcons
-                name={selected ? "check-box" : "check-box-outline-blank"}
-                size={22}
-                color={selected ? "#13ec37" : "#6b7280"}
-              />
-              <Text style={{ color: "white", marginLeft: 10 }}>{type}</Text>
-            </Pressable>
-          );
-        })}
-
-        {/* ── DESCRIPTION SECTION ── */}
-        <Text
-          style={{
-            color: "white",
-            fontSize: 18,
-            fontWeight: "bold",
-            marginTop: 24,
-          }}
-        >
-          Description
-        </Text>
-
-        <TextInput
-          placeholder="Describe the damage..."
-          placeholderTextColor="#6b7280"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          style={{
-            backgroundColor: "#1c3020",
-            padding: 15,
-            borderRadius: 12,
-            color: "white",
-            height: 120,
-            textAlignVertical: "top",
-            marginTop: 10,
-          }}
-        />
-
-        {/* ── EVIDENCE SECTION ── */}
-        <Text
-          style={{
-            color: "white",
-            fontSize: 18,
-            fontWeight: "bold",
-            marginTop: 24,
-          }}
-        >
-          Evidence
-        </Text>
-
-        <Pressable
-          onPress={pickImage}
-          style={{
-            borderWidth: 2,
-            borderStyle: "dashed",
-            borderColor: "#13ec37",
-            borderRadius: 15,
-            padding: 30,
-            marginTop: 10,
-            alignItems: "center",
-          }}
-        >
-          {image ? (
-            <Image
-              source={{ uri: image }}
-              style={{ width: "100%", height: 150, borderRadius: 10 }}
+          <View style={[styles.inputField, fieldStyle('village'), { marginTop: 10 }]}>
+            <MaterialIcons name="location-city" size={18} color={focusedField === 'village' ? C.primary : C.textMuted} />
+            <TextInput
+              placeholder="Village (e.g. Sigiriya)"
+              placeholderTextColor={C.textMuted}
+              value={village} onChangeText={setVillage}
+              onFocus={() => setFocusedField('village')}
+              onBlur={() => setFocusedField(null)}
+              style={styles.inputText}
             />
-          ) : (
-            <>
-              <MaterialIcons name="add-a-photo" size={30} color="#13ec37" />
-              <Text style={{ color: "#9ca3af", marginTop: 10 }}>
-                Tap to take photo or upload from gallery
-              </Text>
-            </>
-          )}
-        </Pressable>
+          </View>
 
-        {/* ── BUTTONS ── */}
-        <View style={{ flexDirection: "row", marginTop: 30 }}>
-          <Pressable
-            onPress={clear}
-            style={{
-              flex: 1,
-              padding: 15,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: "#6b7280",
-              marginRight: 10,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#9ca3af" }}>Clear</Text>
-          </Pressable>
+          <View style={styles.gpsPill}>
+            <MaterialIcons name="my-location" size={15} color={C.primary} />
+            <Text style={styles.gpsPillText} numberOfLines={1}>{locationText}</Text>
+            <Pressable onPress={getLocation} style={styles.gpsBtn}>
+              <Text style={styles.gpsBtnText}>GPS</Text>
+            </Pressable>
+          </View>
+        </View>
 
-          <Pressable
-            onPress={submit}
-            disabled={loading}
-            style={{
-              flex: 1,
-              padding: 15,
-              borderRadius: 12,
-              backgroundColor: "#ef4444",
-              marginLeft: 10,
-              alignItems: "center",
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" />
+        {/* ── DAMAGE TYPE CARD ── */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionLabel}>DAMAGE TYPE</Text>
+          </View>
+
+          {DAMAGE_TYPES.map((type) => {
+            const selected = selectedTypes.includes(type);
+            return (
+              <Pressable
+                key={type}
+                onPress={() => toggleType(type)}
+                style={[styles.damageTypeRow, selected && styles.damageTypeRowSelected]}
+              >
+                <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+                  <MaterialIcons
+                    name={selected ? "check" : "check-box-outline-blank"}
+                    size={selected ? 14 : 20}
+                    color={selected ? C.surface : C.border}
+                  />
+                </View>
+                <Text style={[styles.damageTypeText, selected && styles.damageTypeTextSelected]}>
+                  {type}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* ── DESCRIPTION CARD ── */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionLabel}>DESCRIPTION</Text>
+          </View>
+          <TextInput
+            placeholder="Describe the damage..."
+            placeholderTextColor={C.textMuted}
+            value={description} onChangeText={setDescription}
+            multiline
+            onFocus={() => setFocusedField('description')}
+            onBlur={() => setFocusedField(null)}
+            style={[styles.multilineInput, fieldStyle('description')]}
+          />
+        </View>
+
+        {/* ── EVIDENCE CARD ── */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionLabel}>EVIDENCE</Text>
+          </View>
+          <Pressable onPress={pickImage} style={[styles.imageSlot, image ? styles.imageSlotFilled : null]}>
+            {image ? (
+              <>
+                <Image source={{ uri: image }} style={styles.imagePreview} />
+                <Pressable onPress={() => setImage(null)} style={styles.imageRemoveBtn}>
+                  <MaterialIcons name="close" size={14} color={C.surface} />
+                </Pressable>
+              </>
             ) : (
-              <Text style={{ color: "white", fontWeight: "bold" }}>Submit</Text>
+              <>
+                <MaterialIcons name="add-a-photo" size={28} color={C.textMuted} />
+                <Text style={styles.imageSlotLabel}>Add Photo</Text>
+              </>
             )}
+          </Pressable>
+        </View>
+
+        {/* ── ACTION BUTTONS ── */}
+        <View style={styles.buttonRow}>
+          <Pressable onPress={clear} style={styles.clearBtn}>
+            <Text style={styles.clearText}>Clear</Text>
+          </Pressable>
+          <Pressable onPress={submit} disabled={loading} style={styles.submitBtn}>
+            {loading
+              ? <ActivityIndicator color={C.surface} />
+              : <Text style={styles.submitText}>Submit Report</Text>}
           </Pressable>
         </View>
 
@@ -392,19 +277,120 @@ export default function DamageReport() {
   );
 }
 
-// Shared inline styles for input rows
-const inputRow = {
-  flexDirection: "row" as const,
-  alignItems: "center" as const,
-  backgroundColor: "#1c3020",
-  padding: 12,
-  borderRadius: 10,
-  marginTop: 10,
+const cardShadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.07,
+  shadowRadius: 8,
+  elevation: 3,
 };
 
-const inputText = {
-  color: "white" as const,
-  flex: 1,
-  marginLeft: 8,
-  fontSize: 14,
-};
+const styles = StyleSheet.create({
+  screen:        { flex: 1, backgroundColor: C.bg },
+  scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 48 },
+
+  card: {
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...cardShadow,
+  },
+
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
+  sectionAccent: { width: 3, height: 16, backgroundColor: C.primary, borderRadius: 2, marginRight: 8 },
+  sectionLabel:  {
+    color: C.textMuted, fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold, letterSpacing: 1.5,
+  },
+
+  inputField: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, borderWidth: 1,
+    paddingVertical: spacing.sm, paddingHorizontal: 14,
+  },
+  inputText: {
+    flex: 1, marginLeft: 10,
+    color: C.text, fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
+  },
+
+  pickerField: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, borderWidth: 1,
+    borderColor: C.border, backgroundColor: C.bgSubtle,
+    paddingLeft: 14, overflow: 'hidden',
+  },
+  pickerFieldFilled: {
+    borderColor: C.primary, backgroundColor: C.surface,
+  },
+  picker: {
+    flex: 1, color: C.text, marginLeft: 6,
+  },
+
+  gpsPill: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: 10, backgroundColor: C.bgSubtle,
+    borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: C.border, gap: 8,
+  },
+  gpsPillText: {
+    flex: 1, color: C.textMuted, fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
+  },
+  gpsBtn: {
+    backgroundColor: C.primary, paddingHorizontal: 14,
+    paddingVertical: 5, borderRadius: 12, alignItems: 'center',
+  },
+  gpsBtnText: { color: C.surface, fontFamily: fontFamily.bold, fontSize: fontSize.xs },
+
+  damageTypeRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: 4,
+    borderRadius: 12, marginBottom: 4, gap: 12,
+  },
+  damageTypeRowSelected: {
+    backgroundColor: C.bgSubtle,
+    paddingHorizontal: 10,
+  },
+  checkbox: {
+    width: 24, height: 24, borderRadius: 6,
+    borderWidth: 1.5, borderColor: C.border,
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: C.bgSubtle,
+  },
+  checkboxSelected: { backgroundColor: C.primary, borderColor: C.primary },
+  damageTypeText:         { color: C.text, flex: 1, fontSize: fontSize.sm, fontFamily: fontFamily.regular },
+  damageTypeTextSelected: { color: C.primary, fontFamily: fontFamily.semiBold },
+
+  multilineInput: {
+    borderRadius: 12, borderWidth: 1,
+    padding: spacing.sm, height: vs(120),
+    textAlignVertical: 'top', fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular, color: C.text,
+  },
+
+  imageSlot: {
+    borderRadius: 14, borderWidth: 1.5,
+    borderStyle: 'dashed', borderColor: C.border,
+    height: vs(110), justifyContent: 'center', alignItems: 'center',
+    backgroundColor: C.bgSubtle, gap: 8,
+  },
+  imageSlotFilled: { borderStyle: 'solid', borderColor: 'transparent', overflow: 'hidden' },
+  imagePreview:    { width: '100%', height: '100%', borderRadius: 14 },
+  imageSlotLabel:  { color: C.textMuted, fontSize: fontSize.sm, fontFamily: fontFamily.medium },
+  imageRemoveBtn:  {
+    position: 'absolute', top: 8, right: 8,
+    backgroundColor: C.danger, borderRadius: 12,
+    width: 26, height: 26, justifyContent: 'center', alignItems: 'center',
+  },
+
+  buttonRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  clearBtn: {
+    flex: 1, borderWidth: 1.5, borderColor: C.danger,
+    padding: 16, borderRadius: 14, alignItems: 'center',
+  },
+  clearText:  { color: C.danger, fontFamily: fontFamily.semiBold, fontSize: fontSize.base },
+  submitBtn:  { flex: 2, backgroundColor: C.primary, padding: 16, borderRadius: 14, alignItems: 'center' },
+  submitText: { color: C.surface, fontFamily: fontFamily.extraBold, fontSize: fontSize.base },
+});

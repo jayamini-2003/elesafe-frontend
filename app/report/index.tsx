@@ -1,32 +1,37 @@
+import { fontSize } from "../../utils/responsive";
 import { router } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { theme } from "../../constants/theme";
+
+const C = theme.colors;
 
 export default function ReportHome() {
   return (
-    <View style={{ flex: 1, justifyContent: "center", gap: 20, padding: 20, backgroundColor: "#102213" }}>
-      
-      <Text style={{ color: "white", fontSize: 24, fontWeight: "bold", textAlign: "center" }}>
-        Report Incident
-      </Text>
+    <View style={styles.screen}>
+      <Text style={styles.title}>Report Incident</Text>
 
       <Pressable
-        onPress={() => router.push("/(tabs)/report/sighting")}
-        style={{ backgroundColor: "#1c3020", padding: 15, borderRadius: 10 }}
+        onPress={() => router.push("/report/sighting")}
+        style={styles.sightingBtn}
       >
-        <Text style={{ color: "#13ec37", textAlign: "center", fontWeight: "bold" }}>
-          Report Sighting
-        </Text>
+        <Text style={styles.sightingText}>Report Sighting</Text>
       </Pressable>
 
       <Pressable
-        onPress={() => router.push("/(tabs)/report/damage")}
-        style={{ backgroundColor: "#1c3020", padding: 15, borderRadius: 10 }}
+        onPress={() => router.push("/report/damage")}
+        style={styles.damageBtn}
       >
-        <Text style={{ color: "#ef4444", textAlign: "center", fontWeight: "bold" }}>
-          Report Damage
-        </Text>
+        <Text style={styles.damageText}>Report Damage</Text>
       </Pressable>
-
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen:       { flex: 1, justifyContent: "center", gap: 20, padding: 20, backgroundColor: C.bg },
+  title:        { color: C.text, fontSize: fontSize.xl, fontWeight: "bold", textAlign: "center" },
+  sightingBtn:  { backgroundColor: C.surface, padding: 15, borderRadius: 10, borderWidth: 1, borderColor: C.border },
+  sightingText: { color: C.primary, textAlign: "center", fontWeight: "bold", fontSize: fontSize.base },
+  damageBtn:    { backgroundColor: C.surface, padding: 15, borderRadius: 10, borderWidth: 1, borderColor: C.border },
+  damageText:   { color: C.danger, textAlign: "center", fontWeight: "bold", fontSize: fontSize.base },
+});
