@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import MapView, { Callout, Marker } from "react-native-maps";
+import { isReportActive, subscribeReportResolved, useAlertSocket } from "../../hooks/useAlertSocket";
 import { reportService } from "../../services/reportService";
 import { safeTop, spacing, fontSize, fontFamily } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
@@ -123,6 +124,16 @@ export default function MapScreen() {
     getUserLocation();
   }, []);
 
+  // Keep WebSocket alive for live resolve events
+  useAlertSocket();
+
+  useEffect(() => {
+    return subscribeReportResolved((reportId) => {
+      setSightings((prev) => prev.filter((s) => s.reportId !== reportId));
+      setSelectedSighting((prev) => (prev?.reportId === reportId ? null : prev));
+    });
+  }, []);
+
   useFocusEffect(
     useCallback(() => { fetchSightings(); }, [])
   );
@@ -141,7 +152,8 @@ export default function MapScreen() {
       const onlySightings = (Array.isArray(data) ? data : []).filter(
         (r: any) => r._class?.includes("SightingReport") || r.numberOfElephants !== undefined
       );
-      const last24h = onlySightings.filter((r: any) =>
+      const activeSightings = onlySightings.filter((r: any) => isReportActive(r.status));
+      const last24h = activeSightings.filter((r: any) =>
         isWithin24Hours(r.dateTime || r.submittedAt)
       );
       const withCoords = await Promise.all(

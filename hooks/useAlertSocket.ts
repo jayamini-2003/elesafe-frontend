@@ -41,6 +41,27 @@ function addAlert(alert: SightingAlert) {
   notifyListeners();
 }
 
+function removeResolvedReport(reportId: string) {
+  _alertHistory = _alertHistory.filter((a) => a.reportId !== reportId);
+  if (_latestAlert?.reportId === reportId) {
+    _latestAlert = null;
+  }
+  notifyListeners();
+}
+
+let _resolvedListeners: Array<(reportId: string) => void> = [];
+
+export function subscribeReportResolved(listener: (reportId: string) => void) {
+  _resolvedListeners.push(listener);
+  return () => {
+    _resolvedListeners = _resolvedListeners.filter((fn) => fn !== listener);
+  };
+}
+
+export function isReportActive(status?: string | null): boolean {
+  return status !== 'RESOLVED';
+}
+
 function clearLatest() {
   _latestAlert = null;
   notifyListeners();
@@ -82,6 +103,17 @@ function ensureConnected() {
           addAlert(alert);
         } catch (e) {
           console.warn('[EleSafe WS] Failed to parse alert:', e);
+        }
+      });
+      client.subscribe('/topic/report-resolved', (message) => {
+        try {
+          const { reportId } = JSON.parse(message.body);
+          if (reportId) {
+            removeResolvedReport(reportId);
+            _resolvedListeners.forEach((fn) => fn(reportId));
+          }
+        } catch (e) {
+          console.warn('[EleSafe WS] Failed to parse resolve event:', e);
         }
       });
     },
@@ -128,6 +160,7 @@ async function fetchLast24hAlerts() {
 
     const alerts: SightingAlert[] = data
       .filter((r: any) => r.numberOfElephants !== undefined)
+      .filter((r: any) => isReportActive(r.status))
       .map((r: any) => ({
         reportId: r.reportId ?? r.id ?? String(Math.random()),
         reporterId: r.reporterId ?? r.userId ?? '',
