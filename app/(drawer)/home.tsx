@@ -8,7 +8,7 @@ import {
   ActivityIndicator, Alert, Image, Modal, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import { AppHeaderLogo } from '../../components/AppHeader';
 import { theme } from '../../constants/theme';
 import { useAlertSocket } from '../../hooks/useAlertSocket';
@@ -18,25 +18,25 @@ import { fontFamily, fontSize, spacing, vs } from '../../utils/responsive';
 
 function timeAgo(receivedAt: number): string {
   const diff = Math.floor((Date.now() - receivedAt) / 1000);
-  if (diff < 60)    return `${diff}s ago`;
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
 export default function Home() {
-  const [region,         setRegion]         = useState<any>(null);
-  const [user,           setUser]           = useState<any>(null);
-  const [showProfile,    setShowProfile]    = useState(false);
-  const [editMode,       setEditMode]       = useState(false);
-  const [saving,         setSaving]         = useState(false);
+  const [region, setRegion] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [form, setForm] = useState({ firstName:'', lastName:'', phoneNumber:'', village:'', profilePicture:'' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', phoneNumber: '', village: '', profilePicture: '' });
 
   const staticAlerts = [
-    { id: '1', latitude: 6.9285, longitude: 79.862,  title: 'Elephant' },
+    { id: '1', latitude: 6.9285, longitude: 79.862, title: 'Elephant' },
     { id: '2', latitude: 6.9265, longitude: 79.8605, title: 'Fence Damage' },
-    { id: '3', latitude: 6.931,  longitude: 79.864,  title: 'Elephant Movement' },
+    { id: '3', latitude: 6.931, longitude: 79.864, title: 'Elephant Movement' },
   ];
 
   const { alertHistory, unreadCount } = useAlertSocket();
@@ -56,9 +56,9 @@ export default function Home() {
   }, []);
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371, dLat = ((lat2-lat1)*Math.PI)/180, dLon = ((lon2-lon1)*Math.PI)/180;
-    const a = Math.sin(dLat/2)**2 + Math.cos((lat1*Math.PI)/180)*Math.cos((lat2*Math.PI)/180)*Math.sin(dLon/2)**2;
-    return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+    const R = 6371, dLat = ((lat2 - lat1) * Math.PI) / 180, dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
   };
 
   const getGreeting = () => {
@@ -67,35 +67,35 @@ export default function Home() {
   };
 
   const openProfile = () => {
-    setForm({ firstName: user?.firstName||'', lastName: user?.lastName||'', phoneNumber: user?.phoneNumber||'', village: user?.village||'', profilePicture: user?.profilePicture||'' });
+    setForm({ firstName: user?.firstName || '', lastName: user?.lastName || '', phoneNumber: user?.phoneNumber || '', village: user?.village || '', profilePicture: user?.profilePicture || '' });
     setEditMode(false); setShowProfile(true);
   };
 
   const pickAndUploadPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert('Permission required','Allow gallery access to change photo'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing:true, aspect:[1,1], quality:0.7 });
+    if (!perm.granted) { Alert.alert('Permission required', 'Allow gallery access to change photo'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (result.canceled) return;
     try {
       setUploadingPhoto(true);
-      const publicUrl = await uploadProfilePicture(user?.userId||user?.email||'unknown', result.assets[0].uri);
-      setForm(f=>({...f, profilePicture: publicUrl})); setUser((u:any)=>({...u, profilePicture: publicUrl}));
-      const updated = await authService.updateProfile({ firstName: form.firstName||user?.firstName||'', lastName: form.lastName||user?.lastName||'', phoneNumber: form.phoneNumber||user?.phoneNumber||'', village: form.village||user?.village||'', profilePicture: publicUrl });
-      setUser(updated); setForm(f=>({...f, profilePicture: updated.profilePicture||publicUrl}));
-      Alert.alert('✅ Photo updated','Profile picture changed successfully');
-    } catch (err:any) { Alert.alert('Upload failed', err.message||'Could not upload image'); } finally { setUploadingPhoto(false); }
+      const publicUrl = await uploadProfilePicture(user?.userId || user?.email || 'unknown', result.assets[0].uri);
+      setForm(f => ({ ...f, profilePicture: publicUrl })); setUser((u: any) => ({ ...u, profilePicture: publicUrl }));
+      const updated = await authService.updateProfile({ firstName: form.firstName || user?.firstName || '', lastName: form.lastName || user?.lastName || '', phoneNumber: form.phoneNumber || user?.phoneNumber || '', village: form.village || user?.village || '', profilePicture: publicUrl });
+      setUser(updated); setForm(f => ({ ...f, profilePicture: updated.profilePicture || publicUrl }));
+      Alert.alert('✅ Photo updated', 'Profile picture changed successfully');
+    } catch (err: any) { Alert.alert('Upload failed', err.message || 'Could not upload image'); } finally { setUploadingPhoto(false); }
   };
 
   const handleSave = async () => {
-    try { setSaving(true); const updated = await authService.updateProfile(form); setUser(updated); setEditMode(false); Alert.alert('Saved','Profile updated successfully'); }
-    catch (error:any) { Alert.alert('Error', error.response?.data?.message||'Update failed'); } finally { setSaving(false); }
+    try { setSaving(true); const updated = await authService.updateProfile(form); setUser(updated); setEditMode(false); Alert.alert('Saved', 'Profile updated successfully'); }
+    catch (error: any) { Alert.alert('Error', error.response?.data?.message || 'Update failed'); } finally { setSaving(false); }
   };
 
   const handleLogout = async () => {
-    Alert.alert('Logout','Are you sure?',[{text:'Cancel',style:'cancel'},{text:'Logout',style:'destructive',onPress:async()=>{ await authService.logout(); setShowProfile(false); router.replace('/(auth)/login'); }}]);
+    Alert.alert('Logout', 'Are you sure?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Logout', style: 'destructive', onPress: async () => { await authService.logout(); setShowProfile(false); router.replace('/(auth)/login'); } }]);
   };
 
-  const fullName = user ? `${user.firstName||''} ${user.lastName||''}`.trim() : 'User';
+  const fullName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'User';
   const currentPicture = editMode ? form.profilePicture : user?.profilePicture;
 
   return (
@@ -112,7 +112,7 @@ export default function Home() {
             <Image source={{ uri: user.profilePicture }} style={styles.avatarCircle} key={user.profilePicture} />
           ) : (
             <View style={[styles.avatarCircle, styles.avatarFallback]}>
-              <Text style={styles.initialsText}>{(user?.firstName?.[0]||'').toUpperCase()}{(user?.lastName?.[0]||'').toUpperCase()}</Text>
+              <Text style={styles.initialsText}>{(user?.firstName?.[0] || '').toUpperCase()}{(user?.lastName?.[0] || '').toUpperCase()}</Text>
             </View>
           )}
           <View style={styles.onlineDot} />
@@ -125,7 +125,7 @@ export default function Home() {
             <Text style={styles.heroName}>{fullName}</Text>
             <MaterialIcons name="chevron-right" size={20} color={C.mist} />
           </View>
-          <Text style={styles.heroLocation}>📍 {user?.village||'Location not set'}</Text>
+          <Text style={styles.heroLocation}>📍 {user?.village || 'Location not set'}</Text>
         </View>
 
         {/* Status chip */}
@@ -174,23 +174,14 @@ export default function Home() {
       {/* ── Live Map Card ── */}
       <View style={styles.mapCardWrapper}>
         <Pressable style={styles.mapCard} onPress={() => router.push('/(drawer)/map')}>
-          {region && (
-            <MapView
+          {region ? (
+            <WebView
               style={{ flex: 1 }}
-              region={{ latitude: region.latitude, longitude: region.longitude, latitudeDelta: 0.008, longitudeDelta: 0.008 }}
-              scrollEnabled={false} zoomEnabled={false}
-            >
-              <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }}>
-                <View style={styles.userDot} />
-              </Marker>
-              {staticAlerts.filter(a => getDistance(region.latitude, region.longitude, a.latitude, a.longitude) < 2).map(alert => (
-                <Marker key={alert.id} coordinate={{ latitude: alert.latitude, longitude: alert.longitude }}>
-                  <View style={styles.alertDot} />
-                </Marker>
-              ))}
-            </MapView>
-          )}
-          {!region && (
+              scrollEnabled={false}
+              pointerEvents="none"
+              source={{ html: `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>*{margin:0;padding:0}html,body,#map{width:100%;height:100%;overflow:hidden}.leaflet-control-zoom,.leaflet-control-attribution{display:none!important}</style></head><body><div id="map"></div><script>var map=L.map('map',{zoomControl:false,attributionControl:false,dragging:false,touchZoom:false,doubleClickZoom:false,scrollWheelZoom:false,keyboard:false}).setView([${region.latitude},${region.longitude}],15);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);L.circleMarker([${region.latitude},${region.longitude}],{radius:8,color:'#fff',fillColor:'#2D6A4F',fillOpacity:1,weight:2}).addTo(map);</script></body></html>` }}
+            />
+          ) : (
             <View style={styles.mapPlaceholder}>
               <ActivityIndicator color={C.primary} />
               <Text style={styles.mapPlaceholderText}>Loading map…</Text>
@@ -216,7 +207,7 @@ export default function Home() {
         </View>
         <Pressable
           style={styles.alertCard}
-          onPress={latestLiveAlert ? () => router.push({ pathname: '/alert-detail', params: { alert: JSON.stringify(latestLiveAlert) }}) : undefined}
+          onPress={latestLiveAlert ? () => router.push({ pathname: '/alert-detail', params: { alert: JSON.stringify(latestLiveAlert) } }) : undefined}
         >
           <View style={styles.alertCardAccent} />
           <View style={styles.alertIconWrap}>
@@ -259,7 +250,7 @@ export default function Home() {
       {/* ════ PROFILE MODAL ════ */}
       <Modal visible={showProfile} animationType="slide" transparent onRequestClose={() => setShowProfile(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setShowProfile(false)}>
-          <Pressable style={styles.profileCard} onPress={() => {}}>
+          <Pressable style={styles.profileCard} onPress={() => { }}>
 
             <View style={styles.modalHandle} />
 
@@ -289,7 +280,7 @@ export default function Home() {
                 <Image key={currentPicture} source={{ uri: currentPicture }} style={styles.profileAvatar} />
               ) : (
                 <View style={[styles.profileAvatar, styles.profileAvatarFallback]}>
-                  <Text style={styles.profileInitials}>{(user?.firstName?.[0]||'').toUpperCase()}{(user?.lastName?.[0]||'').toUpperCase()}</Text>
+                  <Text style={styles.profileInitials}>{(user?.firstName?.[0] || '').toUpperCase()}{(user?.lastName?.[0] || '').toUpperCase()}</Text>
                 </View>
               )}
               <Pressable style={styles.cameraBtn} onPress={pickAndUploadPhoto} disabled={uploadingPhoto}>
@@ -300,16 +291,16 @@ export default function Home() {
             <Text style={styles.photoHint}>{uploadingPhoto ? 'Uploading...' : 'Tap camera to change photo'}</Text>
             <Text style={styles.profileModalName}>{fullName}</Text>
             <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{user?.role?.replace('_',' ')||'USER'}</Text>
+              <Text style={styles.roleText}>{user?.role?.replace('_', ' ') || 'USER'}</Text>
             </View>
             <View style={styles.divider} />
 
-            <ProfileRow icon="credit-card"    label="NIC"        value={user?.nic||'—'}   editable={false} />
-            <ProfileRow icon="email"          label="Email"      value={user?.email||'—'} editable={false} />
-            <ProfileRow icon="person"         label="First Name" value={form.firstName}   editable={editMode} onChangeText={v=>setForm(f=>({...f,firstName:v}))} />
-            <ProfileRow icon="person-outline" label="Last Name"  value={form.lastName}    editable={editMode} onChangeText={v=>setForm(f=>({...f,lastName:v}))} />
-            <ProfileRow icon="phone"          label="Phone"      value={form.phoneNumber} editable={editMode} keyboardType="phone-pad" onChangeText={v=>setForm(f=>({...f,phoneNumber:v}))} />
-            <ProfileRow icon="location-city"  label="Village"    value={form.village}     editable={editMode} onChangeText={v=>setForm(f=>({...f,village:v}))} />
+            <ProfileRow icon="credit-card" label="NIC" value={user?.nic || '—'} editable={false} />
+            <ProfileRow icon="email" label="Email" value={user?.email || '—'} editable={false} />
+            <ProfileRow icon="person" label="First Name" value={form.firstName} editable={editMode} onChangeText={v => setForm(f => ({ ...f, firstName: v }))} />
+            <ProfileRow icon="person-outline" label="Last Name" value={form.lastName} editable={editMode} onChangeText={v => setForm(f => ({ ...f, lastName: v }))} />
+            <ProfileRow icon="phone" label="Phone" value={form.phoneNumber} editable={editMode} keyboardType="phone-pad" onChangeText={v => setForm(f => ({ ...f, phoneNumber: v }))} />
+            <ProfileRow icon="location-city" label="Village" value={form.village} editable={editMode} onChangeText={v => setForm(f => ({ ...f, village: v }))} />
 
             <View style={styles.divider} />
             <Pressable style={styles.logoutBtn} onPress={handleLogout}>
@@ -323,11 +314,11 @@ export default function Home() {
   );
 }
 
-function ProfileRow({ icon, label, value, editable=false, onChangeText, keyboardType='default' }:
-  { icon:any; label:string; value:string; editable?:boolean; onChangeText?:(v:string)=>void; keyboardType?:any }) {
+function ProfileRow({ icon, label, value, editable = false, onChangeText, keyboardType = 'default' }:
+  { icon: any; label: string; value: string; editable?: boolean; onChangeText?: (v: string) => void; keyboardType?: any }) {
   return (
     <View style={styles.profileRowItem}>
-      <View style={[styles.profileRowIcon, editable && { borderColor: theme.colors.primary, borderWidth:1 }]}>
+      <View style={[styles.profileRowIcon, editable && { borderColor: theme.colors.primary, borderWidth: 1 }]}>
         <MaterialIcons name={icon} size={18} color={theme.colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
@@ -336,7 +327,7 @@ function ProfileRow({ icon, label, value, editable=false, onChangeText, keyboard
           <TextInput value={value} onChangeText={onChangeText} keyboardType={keyboardType}
             style={styles.profileRowInput} placeholderTextColor={theme.colors.placeholder} autoCapitalize="words" />
         ) : (
-          <Text style={styles.profileRowValue}>{value||'—'}</Text>
+          <Text style={styles.profileRowValue}>{value || '—'}</Text>
         )}
       </View>
       {editable && <MaterialIcons name="edit" size={14} color={theme.colors.primaryMist} />}
@@ -554,8 +545,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: fontFamily.semiBold,
   },
-  userDot:  { width: 14, height: 14, borderRadius: 7, backgroundColor: C.primary,  borderWidth: 2, borderColor: 'white' },
-  alertDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: C.danger,   borderWidth: 2, borderColor: 'white' },
+  userDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: C.primary, borderWidth: 2, borderColor: 'white' },
+  alertDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: C.danger, borderWidth: 2, borderColor: 'white' },
 
   // ── Sections ──────────────────────────────────────────────────────────────
   section: { marginTop: spacing.lg, paddingHorizontal: 0 },

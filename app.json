@@ -1,43 +1,63 @@
 {
   "expo": {
-    "name": "EleSafeLankaApp",
+    "name": "EleSafe Lanka",
     "slug": "EleSafeLankaApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "elesafelankaapp",
-    "icon": "./assets/images/icon.png",
+    "scheme": "elesafe",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
     "ios": {
-      "config": {
-        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
-      }
+      "supportsTablet": true
     },
     "android": {
-      "config": {
-        "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
-        }
-      }
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0B2E18"
+      },
+      "package": "com.elesafe.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow EleSafe Lanka to use your location to show nearby elephant sightings."
+          "locationAlwaysAndWhenInUsePermission": "Allow EleSafe to use your location to show nearby elephant sightings."
         }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take photos for reports.",
-          "microphonePermission": false
-        }
-      ],
-      "expo-font",
-      "expo-router"
-    ]
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b6d75e04-1030-4b52-999f-37b1f3ad1ead"
+      }
+    }
   }
 }
