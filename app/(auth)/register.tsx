@@ -75,8 +75,8 @@ function PickerField({ label, value, onValueChange, items }: {
       <Text style={pStyles.label}>{label}</Text>
       <View style={pStyles.pickerWrap}>
         <Picker selectedValue={value} onValueChange={onValueChange} style={pStyles.picker} dropdownIconColor={C.primary}>
-          <Picker.Item label={`Select ${label}`} value="" color={C.placeholder} />
-          {items.map(i => <Picker.Item key={i.value} label={i.label} value={i.value} color={C.text} />)}
+          <Picker.Item label={`Select ${label}`} value="" color="#000000" />
+          {items.map(i => <Picker.Item key={i.value} label={i.label} value={i.value} color="#000000" />)}
         </Picker>
       </View>
     </View>
@@ -86,8 +86,8 @@ function PickerField({ label, value, onValueChange, items }: {
 const pStyles = StyleSheet.create({
   wrap:       { marginBottom: spacing.sm },
   label:      { color: C.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.semiBold, letterSpacing: 0.8, marginBottom: 5, textTransform: 'uppercase' },
-  pickerWrap: { backgroundColor: '#F7F9F7', borderRadius: theme.radius.md, borderWidth: 1.5, borderColor: '#E8EEE8', overflow: 'hidden' },
-  picker:     { color: C.text, fontSize: fontSize.base },
+  pickerWrap: { backgroundColor: '#FFFFFF', borderRadius: theme.radius.md, borderWidth: 1.5, borderColor: '#E8EEE8', overflow: 'hidden', minHeight: Platform.OS === 'android' ? 48 : undefined },
+  picker:     { color: '#000000', backgroundColor: '#FFFFFF', fontSize: fontSize.base, ...(Platform.OS === 'android' ? { height: 48 } : {}) },
 });
 
 export default function RegisterScreen() {

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -182,9 +183,9 @@ export default function SightingReport() {
               style={styles.picker}
               dropdownIconColor={C.primary}
             >
-              <Picker.Item label="Select District" value="" color={C.textMuted} />
+              <Picker.Item label="Select District" value="" color="#000000" />
               {SRI_LANKA_DISTRICTS.map((d) => (
-                <Picker.Item key={d} label={d} value={d} color={C.text} />
+                <Picker.Item key={d} label={d} value={d} color="#000000" />
               ))}
             </Picker>
           </View>
@@ -361,14 +362,16 @@ const styles = StyleSheet.create({
   pickerField: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: 12, borderWidth: 1,
-    borderColor: C.border, backgroundColor: C.bgSubtle,
+    borderColor: C.border, backgroundColor: '#FFFFFF',
     paddingLeft: 14, overflow: 'hidden',
+    minHeight: Platform.OS === 'android' ? 48 : undefined,
   },
   pickerFieldFilled: {
-    borderColor: C.primary, backgroundColor: C.surface,
+    borderColor: C.primary, backgroundColor: '#FFFFFF',
   },
   picker: {
-    flex: 1, color: C.text, marginLeft: 6,
+    flex: 1, color: '#000000', backgroundColor: '#FFFFFF', marginLeft: 6,
+    ...(Platform.OS === 'android' ? { height: 48 } : {}),
   },
 
   gpsPill: {

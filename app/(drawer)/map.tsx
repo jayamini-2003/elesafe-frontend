@@ -114,6 +114,7 @@ const buildLeafletHTML = (userLat: number, userLng: number, sightings: any[]) =>
 };
 
 export default function MapScreen() {
+  const webViewRef = useRef<WebView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [sightings, setSightings] = useState<any[]>([]);
@@ -175,10 +176,27 @@ export default function MapScreen() {
   const mapLat = userLocation?.latitude || 7.8731;
   const mapLng = userLocation?.longitude || 80.7718;
 
+  const focusOnSighting = (sighting: any) => {
+    if (!sighting?.coords || !mapReady) return;
+    const { latitude, longitude } = sighting.coords;
+    webViewRef.current?.injectJavaScript(`
+      if (typeof map !== 'undefined') {
+        map.setView([${latitude}, ${longitude}], 15, { animate: true });
+      }
+      true;
+    `);
+  };
+
+  const selectSighting = (sighting: any) => {
+    setSelectedSighting(sighting);
+    focusOnSighting(sighting);
+  };
+
   return (
     <View style={styles.container}>
       {/* WebView Leaflet Map */}
       <WebView
+        ref={webViewRef}
         style={StyleSheet.absoluteFillObject}
         source={{ html: buildLeafletHTML(mapLat, mapLng, sightings) }}
         onLoadEnd={() => setMapReady(true)}
@@ -213,7 +231,7 @@ export default function MapScreen() {
 
       {/* LIVE ALERT BANNER */}
       {latestSighting && (
-        <Pressable onPress={() => setSelectedSighting(latestSighting)} style={styles.warningCardWrap}>
+        <Pressable onPress={() => selectSighting(latestSighting)} style={styles.warningCardWrap}>
           <Animated.View style={[styles.warningCard, { transform: [{ scale: pulseAnim }] }]}>
             <View style={styles.warningCardInner}>
               <View style={styles.warningIconWrap}>
@@ -261,7 +279,7 @@ export default function MapScreen() {
               <Text style={styles.detailNotes}>{selectedSighting.additionalNotes}</Text>
             ) : null}
             <View style={styles.detailBtnRow}>
-              <Pressable style={styles.detailBtnPrimary} onPress={() => setSelectedSighting(selectedSighting)}>
+              <Pressable style={styles.detailBtnPrimary} onPress={() => focusOnSighting(selectedSighting)}>
                 <MaterialIcons name="my-location" size={14} color={C.surface} />
                 <Text style={styles.detailBtnPrimaryText}>Focus Map</Text>
               </Pressable>
@@ -312,7 +330,7 @@ export default function MapScreen() {
               return (
                 <Pressable
                   key={report.reportId}
-                  onPress={() => setSelectedSighting(report)}
+                  onPress={() => selectSighting(report)}
                   style={[styles.sightingRow, isSelected && styles.sightingRowSelected]}
                 >
                   <View style={[styles.sightingIconWrap, { backgroundColor: icon.color + '22' }]}>
