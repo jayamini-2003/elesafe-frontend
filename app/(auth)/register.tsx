@@ -74,7 +74,14 @@ function PickerField({ label, value, onValueChange, items }: {
     <View style={pStyles.wrap}>
       <Text style={pStyles.label}>{label}</Text>
       <View style={pStyles.pickerWrap}>
-        <Picker selectedValue={value} onValueChange={onValueChange} style={pStyles.picker} dropdownIconColor={C.primary}>
+        <Picker
+          selectedValue={value}
+          onValueChange={onValueChange}
+          style={pStyles.picker}
+          dropdownIconColor={C.primary}
+          mode={Platform.OS === 'android' ? 'dropdown' : undefined}
+          itemStyle={Platform.OS === 'ios' ? { color: '#000000', fontSize: fontSize.base } : undefined}
+        >
           <Picker.Item label={`Select ${label}`} value="" color="#000000" />
           {items.map(i => <Picker.Item key={i.value} label={i.label} value={i.value} color="#000000" />)}
         </Picker>
@@ -86,8 +93,24 @@ function PickerField({ label, value, onValueChange, items }: {
 const pStyles = StyleSheet.create({
   wrap:       { marginBottom: spacing.sm },
   label:      { color: C.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.semiBold, letterSpacing: 0.8, marginBottom: 5, textTransform: 'uppercase' },
-  pickerWrap: { backgroundColor: '#FFFFFF', borderRadius: theme.radius.md, borderWidth: 1.5, borderColor: '#E8EEE8', overflow: 'hidden', minHeight: Platform.OS === 'android' ? 48 : undefined },
-  picker:     { color: '#000000', backgroundColor: '#FFFFFF', fontSize: fontSize.base, ...(Platform.OS === 'android' ? { height: 48 } : {}) },
+  pickerWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.md,
+    borderWidth: 1.5,
+    borderColor: '#E8EEE8',
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.sm,
+  },
+  picker: {
+    color: '#000000',
+    backgroundColor: '#FFFFFF',
+    fontSize: fontSize.base,
+    width: '100%',
+    ...(Platform.OS === 'android'
+      ? { height: 52, marginVertical: -6 }
+      : { height: 48 }),
+  },
 });
 
 export default function RegisterScreen() {

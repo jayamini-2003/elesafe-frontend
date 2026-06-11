@@ -182,6 +182,8 @@ export default function SightingReport() {
               onValueChange={setDistrict}
               style={styles.picker}
               dropdownIconColor={C.primary}
+              mode={Platform.OS === 'android' ? 'dropdown' : undefined}
+              itemStyle={Platform.OS === 'ios' ? { color: '#000000', fontSize: fontSize.sm } : undefined}
             >
               <Picker.Item label="Select District" value="" color="#000000" />
               {SRI_LANKA_DISTRICTS.map((d) => (
@@ -363,15 +365,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     borderRadius: 12, borderWidth: 1,
     borderColor: C.border, backgroundColor: '#FFFFFF',
-    paddingLeft: 14, overflow: 'hidden',
-    minHeight: Platform.OS === 'android' ? 48 : undefined,
+    paddingLeft: 14, paddingRight: 4,
+    minHeight: 52,
+    paddingVertical: Platform.OS === 'ios' ? 4 : 0,
   },
   pickerFieldFilled: {
     borderColor: C.primary, backgroundColor: '#FFFFFF',
   },
   picker: {
     flex: 1, color: '#000000', backgroundColor: '#FFFFFF', marginLeft: 6,
-    ...(Platform.OS === 'android' ? { height: 48 } : {}),
+    ...(Platform.OS === 'android'
+      ? { height: 52, marginVertical: -6 }
+      : { height: 44 }),
   },
 
   gpsPill: {
