@@ -3,7 +3,6 @@ import { Picker } from "@react-native-picker/picker";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { theme } from "../../constants/theme";
-import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -18,11 +17,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import { ElephantBehavior, reportService } from "../../services/reportService";
 import { fontSize, fontFamily, spacing, vs } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
 import { uploadReportImage } from "../../services/supabase";
+import { fetchCurrentLocation } from "../../utils/locationHelper";
 
 const C = theme.colors;
 
@@ -32,12 +31,6 @@ const SRI_LANKA_DISTRICTS = [
   "Mannar", "Matale", "Matara", "Moneragala", "Mullaitivu", "Nuwara Eliya",
   "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
 ];
-
-function matchDistrict(value: string): string {
-  if (!value) return "";
-  const normalized = value.replace(/\s+district$/i, "").trim();
-  return SRI_LANKA_DISTRICTS.find((d) => d.toLowerCase() === normalized.toLowerCase()) ?? "";
-}
 
 export default function SightingReport() {
   const [count, setCount]               = useState(1);
@@ -55,23 +48,13 @@ export default function SightingReport() {
   const getLocation = async () => {
     try {
       setGpsLoading(true);
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) { Alert.alert("Permission denied", "Enable location services"); return; }
-      const loc = await Location.getCurrentPositionAsync({});
-      setCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      const address = await Location.reverseGeocodeAsync(loc.coords);
-      if (address.length > 0) {
-        const a = address[0];
-        if (a.subregion) setDistrict(matchDistrict(a.subregion));
-        else if (a.city) setDistrict(matchDistrict(a.city));
-        if (a.name || a.district) setVillage(a.name || a.district || "");
-        const place = `${a.name || ""}, ${a.city || ""}`.trim().replace(/^,|,$/, "");
-        setLocationText(place);
-      } else {
-        setLocationText("Location found");
-      }
-    } catch {
-      Alert.alert("Error", "Could not get location. Try again.");
+      const result = await fetchCurrentLocation();
+      setCoords(result.coords);
+      if (result.district) setDistrict(result.district);
+      if (result.village) setVillage(result.village);
+      setLocationText(result.locationText);
+    } catch (error: any) {
+      Alert.alert("GPS Error", error?.message || "Could not get location. Try again.");
     } finally {
       setGpsLoading(false);
     }
@@ -158,15 +141,15 @@ export default function SightingReport() {
 
           <View style={styles.mapBox}>
             {coords ? (
-              <MapView
-                style={styles.map}
-                region={{ latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.008, longitudeDelta: 0.008 }}
-                scrollEnabled={false} zoomEnabled={false}
-              >
-                <Marker coordinate={{ latitude: coords.latitude, longitude: coords.longitude }} title="Sighting Location" description={locationText}>
-                  <View style={styles.redMarker} />
-                </Marker>
-              </MapView>
+              <View style={styles.mapPreview}>
+                <View style={styles.mapPinCircle}>
+                  <MaterialIcons name="location-on" size={32} color={C.danger} />
+                </View>
+                <Text style={styles.coordsText}>
+                  {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
+                </Text>
+                <Text style={styles.coordsSub} numberOfLines={2}>{locationText}</Text>
+              </View>
             ) : (
               <View style={styles.mapPlaceholder}>
                 <MaterialIcons name="map" size={36} color={C.border} />
@@ -338,18 +321,28 @@ const styles = StyleSheet.create({
     overflow: 'hidden', backgroundColor: C.bgSubtle,
     borderWidth: 1, borderColor: C.border,
   },
-  map: { flex: 1 },
+  mapPreview: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#F0F7F4', padding: spacing.md, gap: 6,
+  },
+  mapPinCircle: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: C.surface, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: C.danger + '44',
+  },
+  coordsText: {
+    color: C.text, fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.sm, marginTop: 4,
+  },
+  coordsSub: {
+    color: C.textMuted, fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs, textAlign: 'center',
+  },
   mapPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   mapPlaceholderText: {
     color: C.textMuted, fontSize: fontSize.sm, textAlign: 'center',
     paddingHorizontal: 20, fontFamily: fontFamily.regular,
   },
-  redMarker: {
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: C.danger, borderWidth: 2.5, borderColor: 'white',
-    shadowColor: C.danger, shadowOpacity: 0.6, shadowRadius: 4, elevation: 5,
-  },
-
   inputField: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: 12, borderWidth: 1,
@@ -363,8 +356,8 @@ const styles = StyleSheet.create({
 
   pickerField: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 12, borderWidth: 1,
-    borderColor: C.border, backgroundColor: '#FFFFFF',
+    borderRadius: 12, borderWidth: 1.5,
+    borderColor: '#D1D5DB', backgroundColor: '#FFFFFF',
     paddingLeft: 14, paddingRight: 4,
     minHeight: 52,
     paddingVertical: Platform.OS === 'ios' ? 4 : 0,
@@ -375,7 +368,7 @@ const styles = StyleSheet.create({
   picker: {
     flex: 1, color: '#000000', backgroundColor: '#FFFFFF', marginLeft: 6,
     ...(Platform.OS === 'android'
-      ? { height: 52, marginVertical: -6 }
+      ? { height: 50 }
       : { height: 44 }),
   },
 

@@ -97,7 +97,7 @@ const pStyles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.md,
     borderWidth: 1.5,
-    borderColor: '#E8EEE8',
+    borderColor: '#D1D5DB',
     justifyContent: 'center',
     minHeight: 52,
     paddingHorizontal: spacing.sm,
@@ -108,7 +108,7 @@ const pStyles = StyleSheet.create({
     fontSize: fontSize.base,
     width: '100%',
     ...(Platform.OS === 'android'
-      ? { height: 52, marginVertical: -6 }
+      ? { height: 50 }
       : { height: 48 }),
   },
 });

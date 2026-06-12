@@ -80,11 +80,14 @@ export default function SafetyScreen() {
 
   const handleSOS = async () => {
     const phoneUrl = `tel:${EMERGENCY_NUMBER}`;
-    const supported = await Linking.canOpenURL(phoneUrl);
-    if (supported) {
-      Linking.openURL(phoneUrl);
-    } else {
-      Alert.alert("Error", "Cannot open dialer");
+    try {
+      await Linking.openURL(phoneUrl);
+    } catch {
+      Alert.alert(
+        "Emergency Number",
+        `Call ${EMERGENCY_NUMBER} immediately.\n\nIf the dialer did not open, dial manually from your phone.`,
+        [{ text: "OK" }]
+      );
     }
   };
 

@@ -3,7 +3,6 @@ import { Picker } from "@react-native-picker/picker";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { theme } from "../../constants/theme";
-import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { uploadReportImage } from '../../services/supabase';
@@ -22,6 +21,7 @@ import {
 import { reportService, DamageType } from "../../services/reportService";
 import { fontSize, fontFamily, spacing, vs } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
+import { fetchCurrentLocation } from "../../utils/locationHelper";
 
 const C = theme.colors;
 
@@ -32,12 +32,6 @@ const SRI_LANKA_DISTRICTS = [
   "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
 ];
 
-function matchDistrict(value: string): string {
-  if (!value) return "";
-  const normalized = value.replace(/\s+district$/i, "").trim();
-  return SRI_LANKA_DISTRICTS.find((d) => d.toLowerCase() === normalized.toLowerCase()) ?? "";
-}
-
 export default function DamageReport() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [description, setDescription]     = useState("");
@@ -46,6 +40,7 @@ export default function DamageReport() {
   const [district, setDistrict]           = useState("");
   const [village, setVillage]             = useState("");
   const [loading, setLoading]             = useState(false);
+  const [gpsLoading, setGpsLoading]       = useState(false);
   const [focusedField, setFocusedField]   = useState<string | null>(null);
 
   const toggleType = (type: string) => {
@@ -55,19 +50,16 @@ export default function DamageReport() {
   };
 
   const getLocation = async () => {
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) { Alert.alert("Permission denied", "Enable location services"); return; }
-    const loc = await Location.getCurrentPositionAsync({});
-    const address = await Location.reverseGeocodeAsync(loc.coords);
-    if (address.length > 0) {
-      const a = address[0];
-      if (a.subregion) setDistrict(matchDistrict(a.subregion));
-      else if (a.city) setDistrict(matchDistrict(a.city));
-      if (a.name || a.district) setVillage(a.name || a.district || "");
-      const place = `${a.name || ""}, ${a.city || ""}`.trim().replace(/^,|,$/, "");
-      setLocationText(place);
-    } else {
-      setLocationText("Location found");
+    try {
+      setGpsLoading(true);
+      const result = await fetchCurrentLocation();
+      if (result.district) setDistrict(result.district);
+      if (result.village) setVillage(result.village);
+      setLocationText(result.locationText);
+    } catch (error: any) {
+      Alert.alert("GPS Error", error?.message || "Could not get location. Try again.");
+    } finally {
+      setGpsLoading(false);
     }
   };
 
@@ -187,8 +179,10 @@ export default function DamageReport() {
           <View style={styles.gpsPill}>
             <MaterialIcons name="my-location" size={15} color={C.primary} />
             <Text style={styles.gpsPillText} numberOfLines={1}>{locationText}</Text>
-            <Pressable onPress={getLocation} style={styles.gpsBtn}>
-              <Text style={styles.gpsBtnText}>GPS</Text>
+            <Pressable onPress={getLocation} disabled={gpsLoading} style={styles.gpsBtn}>
+              {gpsLoading
+                ? <ActivityIndicator size="small" color={C.surface} />
+                : <Text style={styles.gpsBtnText}>GPS</Text>}
             </Pressable>
           </View>
         </View>
@@ -320,8 +314,8 @@ const styles = StyleSheet.create({
 
   pickerField: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 12, borderWidth: 1,
-    borderColor: C.border, backgroundColor: '#FFFFFF',
+    borderRadius: 12, borderWidth: 1.5,
+    borderColor: '#D1D5DB', backgroundColor: '#FFFFFF',
     paddingLeft: 14, paddingRight: 4,
     minHeight: 52,
     paddingVertical: Platform.OS === 'ios' ? 4 : 0,
@@ -332,7 +326,7 @@ const styles = StyleSheet.create({
   picker: {
     flex: 1, color: '#000000', backgroundColor: '#FFFFFF', marginLeft: 6,
     ...(Platform.OS === 'android'
-      ? { height: 52, marginVertical: -6 }
+      ? { height: 50 }
       : { height: 44 }),
   },
 

@@ -10,14 +10,14 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0D3B22"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true,
       "splash": {
         "image": "./assets/images/icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#0D3B22"
+        "backgroundColor": "#FFFFFF"
       }
     },
     "android": {
@@ -28,7 +28,7 @@
       "splash": {
         "image": "./assets/images/icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#0D3B22"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.elesafe.app",
       "versionCode": 1,
@@ -70,7 +70,7 @@
           "image": "./assets/images/icon.png",
           "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#0D3B22"
+          "backgroundColor": "#FFFFFF"
         }
       ]
     ],
