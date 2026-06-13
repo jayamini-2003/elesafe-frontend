@@ -5,30 +5,30 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "elesafe",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "icon": "./assets/images/icon.png",
     "splash": {
-      "image": "./assets/images/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "image": "./assets/images/splash.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#F5F5F0"
     },
     "ios": {
       "supportsTablet": true,
       "splash": {
-        "image": "./assets/images/icon.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#FFFFFF"
+        "image": "./assets/images/splash.jpg",
+        "resizeMode": "cover",
+        "backgroundColor": "#F5F5F0"
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#0B2E18"
+        "backgroundColor": "#F5F5F0"
       },
       "splash": {
-        "image": "./assets/images/icon.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#FFFFFF"
+        "image": "./assets/images/splash.jpg",
+        "resizeMode": "cover",
+        "backgroundColor": "#F5F5F0"
       },
       "package": "com.elesafe.app",
       "versionCode": 1,
@@ -54,7 +54,8 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "userInterfaceStyle": "light"
           }
         }
       ],
@@ -67,10 +68,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
-          "imageWidth": 220,
-          "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
+          "image": "./assets/images/splash.jpg",
+          "resizeMode": "cover",
+          "backgroundColor": "#F5F5F0"
         }
       ]
     ],

@@ -76,7 +76,7 @@ function AccordionItem({
 export default function SafetyScreen() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const EMERGENCY_NUMBER = "1124";
+  const EMERGENCY_NUMBER = "1992";
 
   const handleSOS = async () => {
     const phoneUrl = `tel:${EMERGENCY_NUMBER}`;

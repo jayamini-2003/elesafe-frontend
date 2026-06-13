@@ -1,5 +1,4 @@
 // app/(auth)/register.tsx
-import { Picker } from '@react-native-picker/picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -15,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { LabeledPicker } from '../../components/AppPicker';
 import { authService } from '../../services/authService';
 import { theme } from '../../constants/theme';
 import { fontFamily, fontSize, spacing, vs } from '../../utils/responsive';
@@ -64,53 +64,6 @@ const iStyles = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F9F7', borderRadius: theme.radius.md, paddingHorizontal: spacing.md, paddingVertical: vs(13), borderWidth: 1.5, borderColor: '#E8EEE8', gap: 10 },
   rowFocused: { borderColor: C.primary, backgroundColor: '#F0F8F2' },
   input: { flex: 1, color: C.text, fontSize: fontSize.base, fontFamily: fontFamily.regular },
-});
-
-function PickerField({ label, value, onValueChange, items }: {
-  label: string; value: string; onValueChange: (v: string) => void;
-  items: { label: string; value: string }[];
-}) {
-  return (
-    <View style={pStyles.wrap}>
-      <Text style={pStyles.label}>{label}</Text>
-      <View style={pStyles.pickerWrap}>
-        <Picker
-          selectedValue={value}
-          onValueChange={onValueChange}
-          style={pStyles.picker}
-          dropdownIconColor={C.primary}
-          mode={Platform.OS === 'android' ? 'dropdown' : undefined}
-          itemStyle={Platform.OS === 'ios' ? { color: '#000000', fontSize: fontSize.base } : undefined}
-        >
-          <Picker.Item label={`Select ${label}`} value="" color="#000000" />
-          {items.map(i => <Picker.Item key={i.value} label={i.label} value={i.value} color="#000000" />)}
-        </Picker>
-      </View>
-    </View>
-  );
-}
-
-const pStyles = StyleSheet.create({
-  wrap:       { marginBottom: spacing.sm },
-  label:      { color: C.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.semiBold, letterSpacing: 0.8, marginBottom: 5, textTransform: 'uppercase' },
-  pickerWrap: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.md,
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: spacing.sm,
-  },
-  picker: {
-    color: '#000000',
-    backgroundColor: '#FFFFFF',
-    fontSize: fontSize.base,
-    width: '100%',
-    ...(Platform.OS === 'android'
-      ? { height: 50 }
-      : { height: 48 }),
-  },
 });
 
 export default function RegisterScreen() {
@@ -203,11 +156,11 @@ export default function RegisterScreen() {
 
             <Text style={styles.sectionHeading}>Location & Role</Text>
 
-            <PickerField label="Gender"   value={form.gender}   onValueChange={v => set('gender', v)}
+            <LabeledPicker label="Gender"   value={form.gender}   onValueChange={v => set('gender', v)} filled={!!form.gender}
               items={[{ label: 'Male', value: 'MALE' }, { label: 'Female', value: 'FEMALE' }, { label: 'Other', value: 'OTHER' }]} />
-            <PickerField label="District" value={form.district} onValueChange={v => set('district', v)}
+            <LabeledPicker label="District" value={form.district} onValueChange={v => set('district', v)} filled={!!form.district}
               items={SRI_LANKA_DISTRICTS.map(d => ({ label: d, value: d }))} />
-            <PickerField label="Role"     value={form.role}     onValueChange={v => set('role', v)}
+            <LabeledPicker label="Role"     value={form.role}     onValueChange={v => set('role', v)} filled={!!form.role}
               items={[{ label: 'User', value: 'User' }, { label: 'Wild Officer', value: 'Wild Officer' }]} />
 
             {form.role === 'Wild Officer' && (

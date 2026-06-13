@@ -1,5 +1,4 @@
 // app/report/sighting.tsx
-import { Picker } from "@react-native-picker/picker";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { theme } from "../../constants/theme";
@@ -9,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +18,7 @@ import {
 import { ElephantBehavior, reportService } from "../../services/reportService";
 import { fontSize, fontFamily, spacing, vs } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
+import { AppPicker } from "../../components/AppPicker";
 import { uploadReportImage } from "../../services/supabase";
 import { fetchCurrentLocation } from "../../utils/locationHelper";
 
@@ -158,21 +157,17 @@ export default function SightingReport() {
             )}
           </View>
 
-          <View style={[styles.pickerField, district ? styles.pickerFieldFilled : null, { marginTop: spacing.sm }]}>
+          <View style={[styles.pickerRow, district ? styles.pickerRowFilled : null, { marginTop: spacing.sm }]}>
             <MaterialIcons name="location-pin" size={18} color={district ? C.primary : C.textMuted} />
-            <Picker
-              selectedValue={district}
-              onValueChange={setDistrict}
-              style={styles.picker}
-              dropdownIconColor={C.primary}
-              mode={Platform.OS === 'android' ? 'dropdown' : undefined}
-              itemStyle={Platform.OS === 'ios' ? { color: '#000000', fontSize: fontSize.sm } : undefined}
-            >
-              <Picker.Item label="Select District" value="" color="#000000" />
-              {SRI_LANKA_DISTRICTS.map((d) => (
-                <Picker.Item key={d} label={d} value={d} color="#000000" />
-              ))}
-            </Picker>
+            <View style={styles.pickerFlex}>
+              <AppPicker
+                selectedValue={district}
+                onValueChange={setDistrict}
+                placeholder="Select District"
+                filled={!!district}
+                items={SRI_LANKA_DISTRICTS.map((d) => ({ label: d, value: d }))}
+              />
+            </View>
           </View>
 
           <View style={[styles.inputField, fieldStyle('village'), { marginTop: 10 }]}>
@@ -354,23 +349,11 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
   },
 
-  pickerField: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: 12, borderWidth: 1.5,
-    borderColor: '#D1D5DB', backgroundColor: '#FFFFFF',
-    paddingLeft: 14, paddingRight: 4,
-    minHeight: 52,
-    paddingVertical: Platform.OS === 'ios' ? 4 : 0,
+  pickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
   },
-  pickerFieldFilled: {
-    borderColor: C.primary, backgroundColor: '#FFFFFF',
-  },
-  picker: {
-    flex: 1, color: '#000000', backgroundColor: '#FFFFFF', marginLeft: 6,
-    ...(Platform.OS === 'android'
-      ? { height: 50 }
-      : { height: 44 }),
-  },
+  pickerRowFilled: {},
+  pickerFlex: { flex: 1 },
 
   gpsPill: {
     flexDirection: 'row', alignItems: 'center',
