@@ -1,11 +1,11 @@
 import { Picker } from '@react-native-picker/picker';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { fontFamily, fontSize, spacing } from '../utils/responsive';
 import { theme } from '../constants/theme';
+import { fontFamily, fontSize, spacing } from '../utils/responsive';
 
 export const PICKER_COLORS = {
   bg: '#FFFFFF',
-  text: '#000000',
+  text: '#1A1A1A',
   border: '#D1D5DB',
   borderActive: theme.colors.primary,
 };
@@ -36,16 +36,35 @@ export function AppPicker({
         style={styles.picker}
         dropdownIconColor={PICKER_COLORS.borderActive}
         mode={Platform.OS === 'android' ? 'dropdown' : undefined}
-        itemStyle={Platform.OS === 'ios' ? { color: PICKER_COLORS.text, fontSize: fontSize.base } : undefined}
+        itemStyle={
+          Platform.OS === 'ios'
+            ? { color: PICKER_COLORS.text, fontSize: fontSize.base }
+            : undefined
+        }
       >
-        <Picker.Item label={placeholder} value="" color={PICKER_COLORS.text} />
+        {/* Placeholder item */}
+        <Picker.Item
+          label={placeholder}
+          value=""
+          color={PICKER_COLORS.text}
+          style={styles.pickerItem}
+          {...(Platform.OS === 'android' ? { fontFamily: fontFamily.regular } : {})}
+        />
+
         {items.map((item) => (
-          <Picker.Item key={item.value || item.label} label={item.label} value={item.value} color={PICKER_COLORS.text} />
+          <Picker.Item
+            key={item.value || item.label}
+            label={item.label}
+            value={item.value}
+            color={PICKER_COLORS.text}
+            style={styles.pickerItem}
+            {...(Platform.OS === 'android' ? { fontFamily: fontFamily.regular } : {})}
+          />
         ))}
       </Picker>
     </View>
   );
-};
+}
 
 type LabeledPickerProps = AppPickerProps & { label: string };
 
@@ -76,6 +95,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
+    // Force white bg even in dark mode
+    ...(Platform.OS === 'android' ? { elevation: 0 } : {}),
   },
   boxFilled: {
     borderColor: PICKER_COLORS.borderActive,
@@ -86,5 +107,11 @@ const styles = StyleSheet.create({
     width: '100%',
     fontSize: fontSize.base,
     ...(Platform.OS === 'android' ? { height: 50 } : { height: 48 }),
+  },
+  // ── This is the key fix: forces white bg + black text in the dropdown popup ──
+  pickerItem: {
+    backgroundColor: '#FFFFFF',
+    color: '#1A1A1A',
+    fontSize: fontSize.base,
   },
 });
