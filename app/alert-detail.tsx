@@ -7,6 +7,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AppHeader from '../components/AppHeader';
 import { useTranslation } from '../context/LocaleContext';
 import { SightingAlert } from '../hooks/useAlertSocket';
+import { formatReportDateTime } from '../utils/sriLankaTime';
 import { fontSize, fontFamily, spacing } from '../utils/responsive';
 
 const C = theme.colors;
@@ -19,14 +20,7 @@ const BEHAVIOR_ICONS: Record<string, { color: string; bg: string; border: string
 };
 
 function formatDateTime(dt: string) {
-  try {
-    if (Array.isArray(JSON.parse(dt))) {
-      const parts = JSON.parse(dt) as number[];
-      const d = new Date(parts[0], parts[1] - 1, parts[2], parts[3] ?? 0, parts[4] ?? 0);
-      return d.toLocaleString();
-    }
-  } catch {}
-  return new Date(dt).toLocaleString();
+  return formatReportDateTime(dt, '');
 }
 
 export default function AlertDetailScreen() {

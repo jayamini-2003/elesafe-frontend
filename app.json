@@ -33,7 +33,7 @@
         "backgroundColor": "#F5F5F0"
       },
       "package": "com.elesafe.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -50,6 +50,7 @@
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "./plugins/withAndroidFullscreenSplash.js",
       "expo-router",
       "expo-font",
       [
@@ -71,7 +72,19 @@
         {
           "image": "./assets/images/splash.jpg",
           "resizeMode": "cover",
-          "backgroundColor": "#F5F5F0"
+          "backgroundColor": "#F5F5F0",
+          "enableFullScreenImage_legacy": true,
+          "ios": {
+            "image": "./assets/images/splash.jpg",
+            "resizeMode": "cover",
+            "backgroundColor": "#F5F5F0",
+            "enableFullScreenImage_legacy": true
+          },
+          "android": {
+            "image": "./assets/images/splash.jpg",
+            "resizeMode": "cover",
+            "backgroundColor": "#F5F5F0"
+          }
         }
       ]
     ],

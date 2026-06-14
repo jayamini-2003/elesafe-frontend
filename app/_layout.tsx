@@ -9,8 +9,8 @@ import {
 } from "@expo-google-fonts/poppins";
 import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useRef } from "react";
-import { Text, TextInput } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { ImageBackground, StyleSheet, Text, TextInput, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AlertBanner } from "../components/AlertBanner";
@@ -62,6 +62,7 @@ function AppShell() {
 }
 
 export default function RootLayout() {
+  const [appReady, setAppReady] = useState(false);
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
@@ -73,11 +74,22 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded) {
       applyGlobalFonts();
+      setAppReady(true);
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
+  if (!appReady) {
+    return (
+      <View style={splashStyles.wrap}>
+        <ImageBackground
+          source={require("../assets/images/splash.jpg")}
+          style={splashStyles.image}
+          resizeMode="cover"
+        />
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -91,3 +103,8 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+const splashStyles = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: "#F5F5F0" },
+  image: { flex: 1, width: "100%", height: "100%" },
+});

@@ -9,7 +9,7 @@
     "start:local": "expo start --localhost --clear",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android --lan",
-    "ios": "expo start --ios",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
   },

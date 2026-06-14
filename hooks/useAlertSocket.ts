@@ -4,6 +4,7 @@ import { Client } from '@stomp/stompjs';
 import { useEffect, useState } from 'react';
 import SockJS from 'sockjs-client';
 import { BASE_URL } from '../services/api';
+import { getSriLankaNowForApi, parseReportDateTime } from '../utils/sriLankaTime';
 
 export interface SightingAlert {
   reportId: string;
@@ -99,7 +100,10 @@ function ensureConnected() {
       client.subscribe('/topic/alerts', (message) => {
         try {
           const raw = JSON.parse(message.body);
-          const alert: SightingAlert = { ...raw, receivedAt: Date.now() };
+          const alert: SightingAlert = {
+            ...raw,
+            receivedAt: parseReportDateTime(raw.dateTime) || Date.now(),
+          };
           addAlert(alert);
         } catch (e) {
           console.warn('[EleSafe WS] Failed to parse alert:', e);
@@ -135,14 +139,7 @@ function releaseConnection() {
 
 let _hasFetchedHistory = false;
 
-const toMs = (raw: any): number => {
-  if (!raw) return 0;
-  if (Array.isArray(raw)) {
-    const [y, mo, d, h = 0, m = 0, s = 0] = raw;
-    return new Date(y, mo - 1, d, h, m, s).getTime();
-  }
-  return new Date(raw).getTime();
-};
+const toMs = (raw: any): number => parseReportDateTime(raw);
 
 async function fetchLast24hAlerts() {
   if (_hasFetchedHistory) return;
@@ -172,7 +169,7 @@ async function fetchLast24hAlerts() {
         behavior: r.behavior ?? 'CALM',
         additionalNotes: r.additionalNotes,
         imagePath: r.imagePath,
-        dateTime: r.dateTime ?? r.createdAt ?? new Date().toISOString(),
+        dateTime: r.dateTime ?? r.createdAt ?? getSriLankaNowForApi(),
         receivedAt: toMs(r.dateTime ?? r.createdAt) || now,
       }))
       .filter((a) => a.receivedAt >= cutoff)

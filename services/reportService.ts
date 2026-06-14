@@ -1,5 +1,6 @@
 // services/reportService.ts
 import api from './api';
+import { getSriLankaNowForApi } from '../utils/sriLankaTime';
 
 export type ElephantBehavior = 'CALM' | 'AGGRESSIVE' | 'MOVING' | 'FEEDING';
 export type DamageType = 'CROP' | 'PROPERTY' | 'VEHICLE' | 'HUMAN_INJURY';
@@ -12,8 +13,8 @@ export interface SightingPayload {
   numberOfElephants: number;
   behavior: ElephantBehavior;
   additionalNotes?: string;
-  // ✅ ADD THIS
   imagePath?: string;
+  dateTime?: string;
 }
 
 export interface DamagePayload {
@@ -21,18 +22,24 @@ export interface DamagePayload {
   village: string;
   damageType: DamageType;
   description: string;
-  // already existed
   imagePath?: string;
+  dateTime?: string;
 }
 
 export const reportService = {
   async submitSighting(payload: SightingPayload) {
-    const res = await api.post('/api/reports/sighting', payload);
+    const res = await api.post('/api/reports/sighting', {
+      ...payload,
+      dateTime: payload.dateTime ?? getSriLankaNowForApi(),
+    });
     return res.data;
   },
 
   async submitDamage(payload: DamagePayload) {
-    const res = await api.post('/api/reports/damage', payload);
+    const res = await api.post('/api/reports/damage', {
+      ...payload,
+      dateTime: payload.dateTime ?? getSriLankaNowForApi(),
+    });
     return res.data;
   },
 

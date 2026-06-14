@@ -18,6 +18,11 @@ import { reportService } from "../../services/reportService";
 import { safeTop, spacing, fontSize, fontFamily } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
 import { useTranslation } from "../../context/LocaleContext";
+import {
+  formatReportDateTime,
+  formatReportTimeAgo,
+  isWithin24Hours,
+} from "../../utils/sriLankaTime";
 
 const C = theme.colors;
 
@@ -39,28 +44,9 @@ const geocodeAddress = async (
   } catch { return null; }
 };
 
-const formatDate = (raw: any) => {
-  try {
-    if (!raw) return "";
-    if (Array.isArray(raw)) {
-      const [y, mo, d, h = 0, m = 0] = raw;
-      return `${d}/${mo}/${y}  ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    }
-    return new Date(raw).toLocaleString();
-  } catch { return ""; }
-};
+const formatDate = (raw: any) => formatReportDateTime(raw, "");
 
-const isWithin24Hours = (raw: any): boolean => {
-  try {
-    if (!raw) return false;
-    let t: number;
-    if (Array.isArray(raw)) {
-      const [y, mo, d, h = 0, m = 0, s = 0] = raw;
-      t = new Date(y, mo - 1, d, h, m, s).getTime();
-    } else { t = new Date(raw).getTime(); }
-    return Date.now() - t <= 24 * 60 * 60 * 1000;
-  } catch { return false; }
-};
+const isWithin24HoursReport = (raw: any): boolean => isWithin24Hours(raw);
 
 const buildLeafletHTML = (
   userLat: number,
@@ -108,20 +94,7 @@ export default function MapScreen() {
     return t(key) !== key ? t(key) : b;
   }, [t]);
 
-  const timeAgo = useCallback((raw: any): string => {
-    try {
-      if (!raw) return "";
-      let ts: number;
-      if (Array.isArray(raw)) {
-        const [y, mo, d, h = 0, m = 0, s = 0] = raw;
-        ts = new Date(y, mo - 1, d, h, m, s).getTime();
-      } else { ts = new Date(raw).getTime(); }
-      const diff = Math.floor((Date.now() - ts) / 60000);
-      if (diff < 1) return t('common.justNow');
-      if (diff < 60) return t('common.minutesAgo', { count: diff });
-      return t('common.hoursAgo', { count: Math.floor(diff / 60) });
-    } catch { return ""; }
-  }, [t]);
+  const timeAgo = useCallback((raw: any): string => formatReportTimeAgo(raw, t), [t]);
 
   const getBehaviorChip = useCallback((behavior: string) => {
     const label = formatBehavior(behavior);
@@ -160,7 +133,7 @@ export default function MapScreen() {
       const only = (Array.isArray(data) ? data : []).filter(
         (r: any) => r._class?.includes("SightingReport") || r.numberOfElephants !== undefined
       );
-      const last24h = only.filter((r: any) => isWithin24Hours(r.dateTime || r.submittedAt));
+      const last24h = only.filter((r: any) => isWithin24HoursReport(r.dateTime || r.submittedAt));
       const withCoords = await Promise.all(last24h.map(async (report: any) => {
         if (report.latitude && report.longitude) return { ...report, coords: { latitude: report.latitude, longitude: report.longitude } };
         if (report.village || report.district) {

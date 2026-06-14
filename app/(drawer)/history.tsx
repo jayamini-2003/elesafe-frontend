@@ -18,6 +18,10 @@ import {
   View,
 } from 'react-native';
 import { reportService } from '../../services/reportService';
+import {
+  formatReportDateTime,
+  parseReportDateTime,
+} from '../../utils/sriLankaTime';
 
 const C = theme.colors;
 
@@ -38,16 +42,8 @@ const formatDamageType = (d: string, t: (key: string) => string) => {
   return t(key) !== key ? t(key) : d;
 };
 
-const formatDate = (raw: any, t: (key: string) => string) => {
-  try {
-    if (!raw) return t('common.unknownTime');
-    if (Array.isArray(raw)) {
-      const [y, mo, d, h = 0, m = 0] = raw;
-      return `${d}/${mo}/${y}  ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-    return new Date(raw).toLocaleString();
-  } catch { return t('common.unknownTime'); }
-};
+const formatDate = (raw: any, t: (key: string) => string) =>
+  formatReportDateTime(raw, t('common.unknownTime'));
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
@@ -66,14 +62,7 @@ export default function HistoryScreen() {
       const data = await reportService.getMyReports();
       const list = Array.isArray(data) ? data : [];
       const sorted = list.sort((a: any, b: any) => {
-        const toMs = (raw: any) => {
-          if (!raw) return 0;
-          if (Array.isArray(raw)) {
-            const [y, mo, d, h = 0, m = 0, s = 0] = raw;
-            return new Date(y, mo - 1, d, h, m, s).getTime();
-          }
-          return new Date(raw).getTime();
-        };
+        const toMs = (raw: any) => parseReportDateTime(raw);
         return toMs(b.dateTime || b.submittedAt) - toMs(a.dateTime || a.submittedAt);
       });
       setReports(sorted);
