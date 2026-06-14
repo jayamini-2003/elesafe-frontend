@@ -2,7 +2,7 @@
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { theme } from "../../constants/theme";
 import {
   ActivityIndicator,
@@ -17,6 +17,7 @@ import { WebView } from "react-native-webview";
 import { reportService } from "../../services/reportService";
 import { safeTop, spacing, fontSize, fontFamily } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
+import { useTranslation } from "../../context/LocaleContext";
 
 const C = theme.colors;
 
@@ -36,13 +37,6 @@ const geocodeAddress = async (
     }
     return null;
   } catch { return null; }
-};
-
-const formatBehavior = (b: string) => {
-  const map: Record<string, string> = {
-    CALM: "Calm", AGGRESSIVE: "Aggressive", MOVING: "Moving", FEEDING: "Feeding",
-  };
-  return map[b] || b;
 };
 
 const formatDate = (raw: any) => {
@@ -68,52 +62,39 @@ const isWithin24Hours = (raw: any): boolean => {
   } catch { return false; }
 };
 
-const timeAgo = (raw: any): string => {
-  try {
-    if (!raw) return "";
-    let t: number;
-    if (Array.isArray(raw)) {
-      const [y, mo, d, h = 0, m = 0, s = 0] = raw;
-      t = new Date(y, mo - 1, d, h, m, s).getTime();
-    } else { t = new Date(raw).getTime(); }
-    const diff = Math.floor((Date.now() - t) / 60000);
-    if (diff < 1) return "Just now";
-    if (diff < 60) return `${diff}m ago`;
-    return `${Math.floor(diff / 60)}h ago`;
-  } catch { return ""; }
-};
-
-const getBehaviorChip = (behavior: string) => {
-  switch (behavior) {
-    case "AGGRESSIVE": return { label: "Aggressive", bg: '#FDE8E7', text: C.danger };
-    case "MOVING":     return { label: "Moving",     bg: '#FEF3DC', text: C.warning };
-    case "FEEDING":    return { label: "Feeding",    bg: '#E6F4EA', text: C.primary };
-    case "CALM":       return { label: "Calm",       bg: '#EDF5E6', text: C.primaryLight };
-    default:           return { label: behavior,     bg: C.bgSubtle, text: C.textMuted };
-  }
-};
-
-const buildLeafletHTML = (userLat: number, userLng: number, sightings: any[]) => {
+const buildLeafletHTML = (
+  userLat: number,
+  userLng: number,
+  sightings: any[],
+  yourLocation: string,
+  elephantsLabel: (count: number) => string,
+  behaviorLabel: (b: string) => string,
+) => {
   const colors: Record<string, string> = {
     AGGRESSIVE: "#E63946", MOVING: "#F4A261", FEEDING: "#2D6A4F", CALM: "#52B788",
   };
 
   const markersJS = sightings.map((s) => {
     const color = colors[s.behavior] || "#6C757D";
-    const label = formatBehavior(s.behavior);
+    const label = behaviorLabel(s.behavior);
     const n = s.numberOfElephants;
     const loc = `${(s.village || "").replace(/'/g, "")} ${(s.district || "").replace(/'/g, "")}`;
-    return `L.circleMarker([${s.coords.latitude},${s.coords.longitude}],{radius:10,color:'#fff',fillColor:'${color}',fillOpacity:0.9,weight:2}).addTo(map).bindPopup('<b>${n} elephant${n > 1 ? "s" : ""}</b><br/>${label}<br/>${loc}');`;
+    const elephantText = elephantsLabel(n).replace(/'/g, "\\'");
+    const labelText = label.replace(/'/g, "\\'");
+    return `L.circleMarker([${s.coords.latitude},${s.coords.longitude}],{radius:10,color:'#fff',fillColor:'${color}',fillOpacity:0.9,weight:2}).addTo(map).bindPopup('<b>${elephantText}</b><br/>${labelText}<br/>${loc}');`;
   }).join("\n");
 
   const boundsJS = sightings.length > 0
     ? `map.fitBounds([[${userLat},${userLng}],${sightings.map(s => `[${s.coords.latitude},${s.coords.longitude}]`).join(",")}],{padding:[40,40]});`
     : "";
 
-  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>*{margin:0;padding:0}html,body,#map{width:100%;height:100%}.leaflet-control-attribution{font-size:8px!important}</style></head><body><div id="map"></div><script>var map=L.map('map',{zoomControl:true}).setView([${userLat},${userLng}],13);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'}).addTo(map);L.circleMarker([${userLat},${userLng}],{radius:9,color:'#fff',fillColor:'#2D6A4F',fillOpacity:1,weight:3}).addTo(map).bindPopup('Your Location');${markersJS}${boundsJS}</script></body></html>`;
+  const yourLoc = yourLocation.replace(/'/g, "\\'");
+
+  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>*{margin:0;padding:0}html,body,#map{width:100%;height:100%}.leaflet-control-attribution{font-size:8px!important}</style></head><body><div id="map"></div><script>var map=L.map('map',{zoomControl:true}).setView([${userLat},${userLng}],13);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'}).addTo(map);L.circleMarker([${userLat},${userLng}],{radius:9,color:'#fff',fillColor:'#2D6A4F',fillOpacity:1,weight:3}).addTo(map).bindPopup('${yourLoc}');${markersJS}${boundsJS}</script></body></html>`;
 };
 
 export default function MapScreen() {
+  const { t } = useTranslation();
   const webViewRef = useRef<WebView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -121,6 +102,37 @@ export default function MapScreen() {
   const [loadingReports, setLoadingReports] = useState(false);
   const [selectedSighting, setSelectedSighting] = useState<any | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  const formatBehavior = useCallback((b: string) => {
+    const key = `map.behaviors.${b}`;
+    return t(key) !== key ? t(key) : b;
+  }, [t]);
+
+  const timeAgo = useCallback((raw: any): string => {
+    try {
+      if (!raw) return "";
+      let ts: number;
+      if (Array.isArray(raw)) {
+        const [y, mo, d, h = 0, m = 0, s = 0] = raw;
+        ts = new Date(y, mo - 1, d, h, m, s).getTime();
+      } else { ts = new Date(raw).getTime(); }
+      const diff = Math.floor((Date.now() - ts) / 60000);
+      if (diff < 1) return t('common.justNow');
+      if (diff < 60) return t('common.minutesAgo', { count: diff });
+      return t('common.hoursAgo', { count: Math.floor(diff / 60) });
+    } catch { return ""; }
+  }, [t]);
+
+  const getBehaviorChip = useCallback((behavior: string) => {
+    const label = formatBehavior(behavior);
+    switch (behavior) {
+      case "AGGRESSIVE": return { label, bg: '#FDE8E7', text: C.danger };
+      case "MOVING":     return { label, bg: '#FEF3DC', text: C.warning };
+      case "FEEDING":    return { label, bg: '#E6F4EA', text: C.primary };
+      case "CALM":       return { label, bg: '#EDF5E6', text: C.primaryLight };
+      default:           return { label, bg: C.bgSubtle, text: C.textMuted };
+    }
+  }, [formatBehavior]);
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
@@ -176,6 +188,18 @@ export default function MapScreen() {
   const mapLat = userLocation?.latitude || 7.8731;
   const mapLng = userLocation?.longitude || 80.7718;
 
+  const mapHtml = useMemo(
+    () => buildLeafletHTML(
+      mapLat,
+      mapLng,
+      sightings,
+      t('map.yourLocation'),
+      (count) => t('common.elephants', { count }),
+      formatBehavior,
+    ),
+    [mapLat, mapLng, sightings, t, formatBehavior],
+  );
+
   const focusOnSighting = (sighting: any) => {
     if (!sighting?.coords || !mapReady) return;
     const { latitude, longitude } = sighting.coords;
@@ -192,13 +216,19 @@ export default function MapScreen() {
     focusOnSighting(sighting);
   };
 
+  const legendItems = [
+    { behavior: "AGGRESSIVE" },
+    { behavior: "MOVING" },
+    { behavior: "FEEDING" },
+    { behavior: "CALM" },
+  ];
+
   return (
     <View style={styles.container}>
-      {/* WebView Leaflet Map */}
       <WebView
         ref={webViewRef}
         style={StyleSheet.absoluteFillObject}
-        source={{ html: buildLeafletHTML(mapLat, mapLng, sightings) }}
+        source={{ html: mapHtml }}
         onLoadEnd={() => setMapReady(true)}
         javaScriptEnabled
         domStorageEnabled
@@ -209,14 +239,13 @@ export default function MapScreen() {
       {!mapReady && (
         <View style={[StyleSheet.absoluteFillObject, styles.mapLoading]}>
           <ActivityIndicator color={C.primary} size="large" />
-          <Text style={styles.mapLoadingText}>Loading map…</Text>
+          <Text style={styles.mapLoadingText}>{t('map.loading')}</Text>
         </View>
       )}
 
-      {/* TOP BAR */}
       <View style={styles.topBar}>
         <AppHeader
-          title="EleSafe Live Map"
+          title={t('map.title')}
           floating
           rightIcon={loadingReports ? undefined : "refresh"}
           onRightPress={fetchSightings}
@@ -224,12 +253,11 @@ export default function MapScreen() {
         <View style={styles.badge24h}>
           <MaterialIcons name="access-time" size={12} color={C.primary} />
           <Text style={styles.badge24hText}>
-            Last 24h · {sightings.length} sighting{sightings.length !== 1 ? "s" : ""}
+            {t('map.last24h', { count: sightings.length })}
           </Text>
         </View>
       </View>
 
-      {/* LIVE ALERT BANNER */}
       {latestSighting && (
         <Pressable onPress={() => selectSighting(latestSighting)} style={styles.warningCardWrap}>
           <Animated.View style={[styles.warningCard, { transform: [{ scale: pulseAnim }] }]}>
@@ -242,7 +270,7 @@ export default function MapScreen() {
                   {latestSighting.village}, {latestSighting.district}
                 </Text>
                 <Text style={styles.warningText}>
-                  {latestSighting.numberOfElephants} elephant{latestSighting.numberOfElephants > 1 ? "s" : ""} · {formatBehavior(latestSighting.behavior)} · {timeAgo(latestSighting.dateTime)}
+                  {t('common.elephants', { count: latestSighting.numberOfElephants })} · {formatBehavior(latestSighting.behavior)} · {timeAgo(latestSighting.dateTime)}
                 </Text>
               </View>
               <MaterialIcons name="chevron-right" size={18} color="rgba(255,255,255,0.7)" />
@@ -251,7 +279,6 @@ export default function MapScreen() {
         </Pressable>
       )}
 
-      {/* BOTTOM SHEET */}
       <View style={styles.bottomSheet}>
         <View style={styles.handleBar} />
 
@@ -269,7 +296,7 @@ export default function MapScreen() {
               <Text style={styles.detailTime}>{timeAgo(selectedSighting.dateTime)}</Text>
             </View>
             <Text style={styles.detailElephants}>
-              🐘 {selectedSighting.numberOfElephants} Elephant{selectedSighting.numberOfElephants > 1 ? "s" : ""}
+              🐘 {t('common.elephants', { count: selectedSighting.numberOfElephants })}
             </Text>
             <View style={styles.detailLocationRow}>
               <MaterialIcons name="location-pin" size={14} color={C.textMuted} />
@@ -281,34 +308,30 @@ export default function MapScreen() {
             <View style={styles.detailBtnRow}>
               <Pressable style={styles.detailBtnPrimary} onPress={() => focusOnSighting(selectedSighting)}>
                 <MaterialIcons name="my-location" size={14} color={C.surface} />
-                <Text style={styles.detailBtnPrimaryText}>Focus Map</Text>
+                <Text style={styles.detailBtnPrimaryText}>{t('map.focusMap')}</Text>
               </Pressable>
               <Pressable style={styles.detailBtnOutline} onPress={() => setSelectedSighting(null)}>
-                <Text style={styles.detailBtnOutlineText}>Dismiss</Text>
+                <Text style={styles.detailBtnOutlineText}>{t('common.dismiss')}</Text>
               </Pressable>
             </View>
           </View>
         ) : (
           <View style={styles.bottomHeader}>
             <View>
-              <Text style={styles.bottomTitle}>🐘 Last 24h Sightings</Text>
-              <Text style={styles.bottomSubtitle}>{sightings.length} report{sightings.length !== 1 ? "s" : ""} found</Text>
+              <Text style={styles.bottomTitle}>{t('map.sightingsTitle')}</Text>
+              <Text style={styles.bottomSubtitle}>{t('map.reportsFound', { count: sightings.length })}</Text>
             </View>
             <Pressable onPress={fetchSightings} style={styles.refreshBtn}>
               <MaterialIcons name="refresh" size={15} color={C.surface} />
-              <Text style={styles.refreshText}>Refresh</Text>
+              <Text style={styles.refreshText}>{t('common.refresh')}</Text>
             </Pressable>
           </View>
         )}
 
         <View style={styles.legend}>
-          {[
-            { behavior: "AGGRESSIVE", label: "Aggressive" },
-            { behavior: "MOVING",     label: "Moving"     },
-            { behavior: "FEEDING",    label: "Feeding"    },
-            { behavior: "CALM",       label: "Calm"       },
-          ].map(({ behavior, label }) => {
+          {legendItems.map(({ behavior }) => {
             const icon = getMarkerIcon(behavior);
+            const label = formatBehavior(behavior);
             return (
               <View key={behavior} style={styles.legendItem}>
                 <MaterialCommunityIcons name={icon.name as any} size={13} color={icon.color} />
@@ -321,7 +344,7 @@ export default function MapScreen() {
         {loadingReports ? (
           <ActivityIndicator color={C.primary} style={{ marginVertical: 10 }} />
         ) : sightings.length === 0 ? (
-          <Text style={styles.emptyText}>No sightings in the last 24 hours</Text>
+          <Text style={styles.emptyText}>{t('map.noSightings')}</Text>
         ) : (
           <ScrollView style={{ maxHeight: 140 }} showsVerticalScrollIndicator={false}>
             {sightings.map((report: any) => {
@@ -338,7 +361,7 @@ export default function MapScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowTitle}>
-                      {report.numberOfElephants} Elephant{report.numberOfElephants > 1 ? "s" : ""} · {formatBehavior(report.behavior)}
+                      {t('common.elephants', { count: report.numberOfElephants })} · {formatBehavior(report.behavior)}
                     </Text>
                     <Text style={styles.rowSub}>📍 {report.village}, {report.district}</Text>
                   </View>

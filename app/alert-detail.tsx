@@ -5,18 +5,17 @@ import { theme } from "../constants/theme";
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AppHeader from '../components/AppHeader';
+import { useTranslation } from '../context/LocaleContext';
 import { SightingAlert } from '../hooks/useAlertSocket';
 import { fontSize, fontFamily, spacing } from '../utils/responsive';
 
 const C = theme.colors;
 
-const BEHAVIOR_CONFIG: Record<string, {
-  color: string; bg: string; border: string; label: string; icon: string;
-}> = {
-  AGGRESSIVE: { color: C.danger,   bg: C.dangerLight,  border: C.danger + '40',  label: 'Aggressive', icon: 'alert-circle'          },
-  MOVING:     { color: '#f97316',  bg: '#FFF3E0',      border: '#f9731640',       label: 'Moving',     icon: 'run-fast'               },
-  CALM:       { color: C.primary,  bg: C.primaryCream, border: C.primary + '40', label: 'Calm',       icon: 'emoticon-happy-outline' },
-  FEEDING:    { color: '#3b82f6',  bg: '#EFF6FF',      border: '#3b82f640',       label: 'Feeding',    icon: 'food'                   },
+const BEHAVIOR_ICONS: Record<string, { color: string; bg: string; border: string; icon: string }> = {
+  AGGRESSIVE: { color: C.danger,   bg: C.dangerLight,  border: C.danger + '40',  icon: 'alert-circle'          },
+  MOVING:     { color: '#f97316',  bg: '#FFF3E0',      border: '#f9731640',       icon: 'run-fast'               },
+  CALM:       { color: C.primary,  bg: C.primaryCream, border: C.primary + '40', icon: 'emoticon-happy-outline' },
+  FEEDING:    { color: '#3b82f6',  bg: '#EFF6FF',      border: '#3b82f640',       icon: 'food'                   },
 };
 
 function formatDateTime(dt: string) {
@@ -31,19 +30,21 @@ function formatDateTime(dt: string) {
 }
 
 export default function AlertDetailScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ alert: string }>();
   const alert: SightingAlert = JSON.parse(params.alert);
 
-  const behavior = BEHAVIOR_CONFIG[alert.behavior] ?? {
-    color: C.textMuted, bg: C.surface, border: C.border,
-    label: alert.behavior, icon: 'help-circle',
+  const behaviorKey = `map.behaviors.${alert.behavior}`;
+  const behaviorLabel = t(behaviorKey) !== behaviorKey ? t(behaviorKey) : alert.behavior;
+  const behaviorStyle = BEHAVIOR_ICONS[alert.behavior] ?? {
+    color: C.textMuted, bg: C.surface, border: C.border, icon: 'help-circle',
   };
 
   return (
     <View style={styles.screen}>
 
       <AppHeader
-        title="Alert Details"
+        title={t('alertDetail.title')}
         subtitle={`${alert.village} · ${alert.district}`}
         mode="back"
         backRoute="/(drawer)/home"
@@ -54,86 +55,74 @@ export default function AlertDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* BEHAVIOR HERO CARD */}
-        <View style={[styles.heroCard, { borderColor: behavior.color + '40' }]}>
-          {/* Colored top strip */}
-          <View style={[styles.heroStrip, { backgroundColor: behavior.color }]} />
+        <View style={[styles.heroCard, { borderColor: behaviorStyle.color + '40' }]}>
+          <View style={[styles.heroStrip, { backgroundColor: behaviorStyle.color }]} />
           <View style={styles.heroBody}>
-            {/* Large behavior icon circle */}
-            <View style={[styles.behaviorCircle, { backgroundColor: behavior.bg, borderColor: behavior.border }]}>
-              <MaterialCommunityIcons name={behavior.icon as any} size={40} color={behavior.color} />
+            <View style={[styles.behaviorCircle, { backgroundColor: behaviorStyle.bg, borderColor: behaviorStyle.border }]}>
+              <MaterialCommunityIcons name={behaviorStyle.icon as any} size={40} color={behaviorStyle.color} />
             </View>
-            {/* Behavior pill badge */}
-            <View style={[styles.behaviorPill, { backgroundColor: behavior.bg, borderColor: behavior.color }]}>
-              <View style={[styles.pillDot, { backgroundColor: behavior.color }]} />
-              <Text style={[styles.behaviorPillText, { color: behavior.color }]}>
-                {behavior.label} Behavior
+            <View style={[styles.behaviorPill, { backgroundColor: behaviorStyle.bg, borderColor: behaviorStyle.color }]}>
+              <View style={[styles.pillDot, { backgroundColor: behaviorStyle.color }]} />
+              <Text style={[styles.behaviorPillText, { color: behaviorStyle.color }]}>
+                {t('alertDetail.behaviorAlert', { behavior: behaviorLabel })}
               </Text>
             </View>
-            {/* Elephant count */}
             <View style={styles.elephantRow}>
               <Text style={styles.elephantEmoji}>🐘</Text>
               <Text style={styles.elephantCount}>
-                {alert.numberOfElephants} Elephant{alert.numberOfElephants > 1 ? 's' : ''} spotted
+                {t('alertDetail.spotted', { count: alert.numberOfElephants })}
               </Text>
             </View>
-            <Text style={styles.reportId}>ID: {alert.reportId}</Text>
+            <Text style={styles.reportId}>{t('alertDetail.reportIdLabel', { id: alert.reportId })}</Text>
           </View>
         </View>
 
-        {/* LOCATION */}
-        <SectionLabel icon="location-on" label="Location" color={C.primary} />
+        <SectionLabel icon="location-on" label={t('alertDetail.location')} color={C.primary} />
         <InfoCard>
-          <InfoRow icon="location-city" label="Village"  value={alert.village}  />
-          <InfoRow icon="map"           label="District" value={alert.district} />
+          <InfoRow icon="location-city" label={t('alertDetail.village')}  value={alert.village}  />
+          <InfoRow icon="map"           label={t('alertDetail.district')} value={alert.district} />
           {alert.latitude != null && (
             <InfoRow
               icon="my-location"
-              label="GPS Coordinates"
+              label={t('alertDetail.gpsCoordinates')}
               value={`${alert.latitude.toFixed(5)}, ${alert.longitude?.toFixed(5)}`}
             />
           )}
         </InfoCard>
 
-        {/* SIGHTING DETAILS */}
-        <SectionLabel icon="info-outline" label="Sighting Details" color={C.primary} />
+        <SectionLabel icon="info-outline" label={t('alertDetail.sightingDetails')} color={C.primary} />
         <InfoCard>
-          <InfoRow icon="access-time" label="Reported at" value={formatDateTime(alert.dateTime)} />
-          <InfoRow icon="person"      label="Reported by" value={alert.reporterId}               />
+          <InfoRow icon="access-time" label={t('alertDetail.reportedAt')} value={formatDateTime(alert.dateTime)} />
+          <InfoRow icon="person"      label={t('alertDetail.reportedBy')} value={alert.reporterId}               />
           {alert.additionalNotes ? (
-            <InfoRow icon="notes" label="Notes" value={alert.additionalNotes} />
+            <InfoRow icon="notes" label={t('alertDetail.notes')} value={alert.additionalNotes} />
           ) : null}
         </InfoCard>
 
-        {/* SAFETY TIP */}
         <View style={styles.safetyBox}>
           <View style={styles.safetyIconWrap}>
             <MaterialIcons name="health-and-safety" size={22} color={C.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.safetyTitle}>Stay Safe</Text>
-            <Text style={styles.safetyText}>
-              Stay indoors, keep lights on, and alert your neighbours.
-              Do not approach elephants under any circumstances.
-            </Text>
+            <Text style={styles.safetyTitle}>{t('alertDetail.staySafe')}</Text>
+            <Text style={styles.safetyText}>{t('alertDetail.staySafeDesc')}</Text>
           </View>
         </View>
 
-        {/* ACTION BUTTONS */}
         <View style={styles.actionRow}>
           <Pressable
             style={({ pressed }) => [styles.homeBtn, pressed && { opacity: 0.85 }]}
             onPress={() => router.replace('/(drawer)/home')}
           >
             <MaterialIcons name="home" size={18} color={C.surface} />
-            <Text style={styles.homeBtnText}>Go to Home</Text>
+            <Text style={styles.homeBtnText}>{t('alertDetail.goHome')}</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.85 }]}
             onPress={() => router.back()}
           >
             <MaterialIcons name="arrow-back" size={18} color={C.primary} />
-            <Text style={styles.closeBtnText}>Go Back</Text>
+            <Text style={styles.closeBtnText}>{t('alertDetail.goBack')}</Text>
           </Pressable>
         </View>
 
@@ -173,7 +162,6 @@ const styles = StyleSheet.create({
   screen:  { flex: 1, backgroundColor: C.bg },
   content: { padding: spacing.md, paddingBottom: 48 },
 
-  /* ── Hero card ── */
   heroCard: {
     backgroundColor: C.surface,
     borderRadius: 20,
@@ -213,7 +201,6 @@ const styles = StyleSheet.create({
   elephantCount: { color: C.text, fontFamily: fontFamily.bold, fontSize: fontSize.md },
   reportId:      { color: C.textMuted, fontFamily: fontFamily.semiBold, fontSize: fontSize.xs, letterSpacing: 1 },
 
-  /* ── Section labels ── */
   sectionLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,7 +215,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
-  /* ── Info card ── */
   infoCard: {
     backgroundColor: C.surface,
     borderRadius: 16,
@@ -262,7 +248,6 @@ const styles = StyleSheet.create({
   infoLabel: { color: C.textMuted, fontFamily: fontFamily.regular, fontSize: fontSize.xs, marginBottom: 2 },
   infoValue: { color: C.text, fontFamily: fontFamily.semiBold, fontSize: fontSize.sm },
 
-  /* ── Safety box ── */
   safetyBox: {
     flexDirection: 'row',
     gap: 12,
@@ -286,7 +271,6 @@ const styles = StyleSheet.create({
   safetyTitle: { color: C.primary, fontFamily: fontFamily.bold, fontSize: fontSize.sm, marginBottom: 4 },
   safetyText:  { color: C.textSecondary, fontFamily: fontFamily.regular, fontSize: fontSize.xs, lineHeight: 18 },
 
-  /* ── Action buttons ── */
   actionRow: { flexDirection: 'row', gap: 10, marginTop: spacing.lg },
   homeBtn: {
     flex: 1,

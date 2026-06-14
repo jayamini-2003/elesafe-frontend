@@ -3,6 +3,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { safeTop, fontSize, fontFamily, spacing, vs } from '../../utils/responsive';
 import { theme } from "../../constants/theme";
 import AppHeader from '../../components/AppHeader';
+import { useTranslation } from '../../context/LocaleContext';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -27,33 +28,29 @@ const getReportType = (item: any): 'SIGHTING' | 'DAMAGE' => {
   return 'DAMAGE';
 };
 
-const formatBehavior = (b: string) => {
-  const map: Record<string, string> = {
-    CALM: 'Calm', AGGRESSIVE: 'Aggressive', MOVING: 'Moving', FEEDING: 'Feeding',
-  };
-  return map[b] || b;
+const formatBehavior = (b: string, t: (key: string) => string) => {
+  const key = `map.behaviors.${b}`;
+  return t(key) !== key ? t(key) : b;
 };
 
-const formatDamageType = (d: string) => {
-  const map: Record<string, string> = {
-    CROP: 'Crop Damage', PROPERTY: 'Property Damage',
-    VEHICLE: 'Vehicle Damage', HUMAN_INJURY: 'Human Injury',
-  };
-  return map[d] || d;
+const formatDamageType = (d: string, t: (key: string) => string) => {
+  const key = `history.damageTypes.${d}`;
+  return t(key) !== key ? t(key) : d;
 };
 
-const formatDate = (raw: any) => {
+const formatDate = (raw: any, t: (key: string) => string) => {
   try {
-    if (!raw) return 'Unknown time';
+    if (!raw) return t('common.unknownTime');
     if (Array.isArray(raw)) {
       const [y, mo, d, h = 0, m = 0] = raw;
       return `${d}/${mo}/${y}  ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
     return new Date(raw).toLocaleString();
-  } catch { return 'Unknown time'; }
+  } catch { return t('common.unknownTime'); }
 };
 
 export default function HistoryScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'SIGHTING' | 'DAMAGE'>('SIGHTING');
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,7 +90,7 @@ export default function HistoryScreen() {
   return (
     <View style={styles.screen}>
 
-      <AppHeader title="History" subtitle="Your incident reports" />
+      <AppHeader title={t('history.title')} subtitle={t('history.subtitle')} />
 
       <View style={styles.container}>
 
@@ -106,14 +103,14 @@ export default function HistoryScreen() {
               style={[styles.tab, activeTab === tab && styles.tabActive]}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab === 'SIGHTING' ? '🐘 Sightings' : '⚠️ Damage'}
+                {tab === 'SIGHTING' ? t('history.sightings') : t('history.damage')}
               </Text>
             </Pressable>
           ))}
         </View>
 
         <Text style={styles.countText}>
-          {filtered.length} report{filtered.length !== 1 ? 's' : ''}
+          {t('common.reports', { count: filtered.length })}
         </Text>
 
         {loading ? (
@@ -147,23 +144,23 @@ export default function HistoryScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitle}>
                       {type === 'SIGHTING'
-                        ? `🐘 ${item.numberOfElephants} Elephant${item.numberOfElephants > 1 ? 's' : ''}`
-                        : `⚠️ ${formatDamageType(item.damageType)}`}
+                        ? `🐘 ${t('common.elephants', { count: item.numberOfElephants })}`
+                        : `⚠️ ${formatDamageType(item.damageType, t)}`}
                     </Text>
                     {type === 'SIGHTING' && item.behavior && (
-                      <Text style={styles.cardSub}>Behavior: {formatBehavior(item.behavior)}</Text>
+                      <Text style={styles.cardSub}>{t('history.behavior')} {formatBehavior(item.behavior, t)}</Text>
                     )}
                     {type === 'DAMAGE' && item.status && (
                       <Text style={[styles.cardSub, {
                         color: item.status === 'PENDING' ? '#f59e0b' : C.primary,
                       }]}>
-                        Status: {item.status}
+                        {t('history.status')} {item.status}
                       </Text>
                     )}
                     <Text style={styles.cardLocation}>
                       📍 {item.village}{item.district ? `, ${item.district}` : ''}
                     </Text>
-                    <Text style={styles.cardTime}>⏱ {formatDate(item.dateTime)}</Text>
+                    <Text style={styles.cardTime}>⏱ {formatDate(item.dateTime, t)}</Text>
                   </View>
                   <MaterialIcons name="chevron-right" size={20} color={C.textMuted} style={{ alignSelf: 'center' }} />
                 </Pressable>
@@ -178,9 +175,11 @@ export default function HistoryScreen() {
                   />
                 </View>
                 <Text style={styles.emptyText}>
-                  No {activeTab === 'SIGHTING' ? 'sighting' : 'damage'} reports yet
+                  {t('history.noReports', {
+                    type: activeTab === 'SIGHTING' ? t('history.reportTypeSightings') : t('history.reportTypeDamage'),
+                  })}
                 </Text>
-                <Text style={styles.emptyHint}>Pull down to refresh</Text>
+                <Text style={styles.emptyHint}>{t('history.pullRefresh')}</Text>
               </View>
             }
           />
@@ -206,6 +205,7 @@ export default function HistoryScreen() {
 }
 
 function ReportDetail({ report, onClose }: { report: any; onClose: () => void }) {
+  const { t } = useTranslation();
   const type = getReportType(report);
   const isSighting = type === 'SIGHTING';
   const accentColor = isSighting ? C.primary : C.danger;
@@ -214,7 +214,7 @@ function ReportDetail({ report, onClose }: { report: any; onClose: () => void })
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.popupTopBar}>
         <Text style={[styles.popupTitle, { color: accentColor }]}>
-          {isSighting ? '🐘 Sighting Report' : '⚠️ Damage Report'}
+          {isSighting ? t('history.sightingReport') : t('history.damageReport')}
         </Text>
         <Pressable onPress={onClose} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={C.textMuted} />
@@ -226,42 +226,42 @@ function ReportDetail({ report, onClose }: { report: any; onClose: () => void })
       ) : (
         <View style={styles.noImageBox}>
           <MaterialIcons name="image-not-supported" size={36} color={C.textMuted} />
-          <Text style={styles.noImageText}>No evidence image</Text>
+          <Text style={styles.noImageText}>{t('history.noEvidence')}</Text>
         </View>
       )}
 
       <View style={styles.infoBox}>
-        <InfoRow icon="location-pin" label="Location"
+        <InfoRow icon="location-pin" label={t('history.location')}
           value={`${report.village || '—'}${report.district ? `, ${report.district}` : ''}`}
           color={accentColor} />
-        <InfoRow icon="schedule" label="Reported At"
-          value={formatDate(report.dateTime)} color={accentColor} />
+        <InfoRow icon="schedule" label={t('history.reportedAt')}
+          value={formatDate(report.dateTime, t)} color={accentColor} />
         {isSighting && (
           <>
-            <InfoRow icon="groups" label="Number of Elephants"
+            <InfoRow icon="groups" label={t('history.numberOfElephants')}
               value={String(report.numberOfElephants)} color={accentColor} />
-            <InfoRow icon="psychology" label="Behavior"
-              value={formatBehavior(report.behavior)} color={accentColor} />
+            <InfoRow icon="psychology" label={t('history.behavior').replace(/:$/, '')}
+              value={formatBehavior(report.behavior, t)} color={accentColor} />
             {report.additionalNotes && (
-              <InfoRow icon="notes" label="Additional Notes"
+              <InfoRow icon="notes" label={t('history.additionalNotes')}
                 value={report.additionalNotes} color={accentColor} />
             )}
           </>
         )}
         {!isSighting && (
           <>
-            <InfoRow icon="warning" label="Damage Type"
-              value={formatDamageType(report.damageType)} color={accentColor} />
+            <InfoRow icon="warning" label={t('history.damageType')}
+              value={formatDamageType(report.damageType, t)} color={accentColor} />
             {report.description && (
-              <InfoRow icon="description" label="Description"
+              <InfoRow icon="description" label={t('history.description')}
                 value={report.description} color={accentColor} />
             )}
-            <InfoRow icon="flag" label="Status"
+            <InfoRow icon="flag" label={t('history.status').replace(/:$/, '')}
               value={report.status || 'PENDING'}
               color={report.status === 'PENDING' ? '#f59e0b' : accentColor} />
           </>
         )}
-        <InfoRow icon="tag" label="Report ID"
+        <InfoRow icon="tag" label={t('history.reportId')}
           value={report.reportId || '—'} color={C.textMuted} />
       </View>
     </ScrollView>

@@ -11,22 +11,29 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useTranslation } from '../context/LocaleContext';
 import { authService } from '../services/authService';
 import { theme } from '../constants/theme';
 import { fontSize, fontFamily, spacing } from '../utils/responsive';
 
-const NAV_ITEMS = [
-  { label: 'Home',              icon: 'home' as const,             route: '/(drawer)/home',    match: '/home'    },
-  { label: 'Live Map',          icon: 'map' as const,              route: '/(drawer)/map',     match: '/map'     },
-  { label: 'Report Incident',   icon: 'report' as const,           route: '/(drawer)/report',  match: '/report',  accent: theme.colors.danger },
-  { label: 'History',           icon: 'history' as const,          route: '/(drawer)/history', match: '/history' },
-  { label: 'Safety Guidelines', icon: 'health-and-safety' as const,route: '/(drawer)/safety',  match: '/safety'  },
-  { label: 'Notifications',     icon: 'notifications-none' as const,route: '/notifications',   match: '/notifications' },
-];
+function useNavItems() {
+  const { t } = useTranslation();
+  return [
+    { label: t('nav.home'),              icon: 'home' as const,             route: '/(drawer)/home',    match: '/home'    },
+    { label: t('nav.liveMap'),          icon: 'map' as const,              route: '/(drawer)/map',     match: '/map'     },
+    { label: t('nav.reportIncident'),   icon: 'report' as const,           route: '/(drawer)/report',  match: '/report',  accent: theme.colors.danger },
+    { label: t('nav.history'),           icon: 'history' as const,          route: '/(drawer)/history', match: '/history' },
+    { label: t('nav.safety'), icon: 'health-and-safety' as const,route: '/(drawer)/safety',  match: '/safety'  },
+    { label: t('nav.notifications'),     icon: 'notifications-none' as const,route: '/notifications',   match: '/notifications' },
+  ];
+}
 
 type Props = { onClose: () => void };
 
 export default function DrawerContent({ onClose }: Props) {
+  const { t } = useTranslation();
+  const NAV_ITEMS = useNavItems();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
@@ -36,8 +43,12 @@ export default function DrawerContent({ onClose }: Props) {
   }, []);
 
   const fullName = user
-    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User'
-    : 'Loading...';
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || t('common.user')
+    : t('common.loading');
+
+  const roleLabel = user?.role
+    ? (t(`roles.${user.role}`) !== `roles.${user.role}` ? t(`roles.${user.role}`) : user.role.replace('_', ' '))
+    : t('roles.USER');
 
   const handleNav = (route: string) => {
     onClose();
@@ -57,21 +68,19 @@ export default function DrawerContent({ onClose }: Props) {
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + 16 }]}>
 
-      {/* ── Brand header ── */}
       <View style={styles.brandRow}>
         <View style={styles.brandIconWrap}>
           <MaterialCommunityIcons name="elephant" size={26} color={theme.colors.primaryLight} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.brandName}>EleSafe Lanka</Text>
-          <Text style={styles.brandTagline}>Wildlife Alert System</Text>
+          <Text style={styles.brandName}>{t('common.appName')}</Text>
+          <Text style={styles.brandTagline}>{t('common.tagline')}</Text>
         </View>
         <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
           <MaterialIcons name="close" size={20} color={theme.colors.mist} />
         </Pressable>
       </View>
 
-      {/* ── Profile card ── */}
       <Pressable
         style={styles.profileCard}
         onPress={() => { onClose(); setTimeout(() => router.push('/(drawer)/home'), 120); }}
@@ -88,13 +97,11 @@ export default function DrawerContent({ onClose }: Props) {
         )}
         <View style={styles.profileInfo}>
           <Text style={styles.profileName} numberOfLines={1}>{fullName}</Text>
-          <Text style={styles.profileRole} numberOfLines={1}>
-            {user?.role?.replace('_', ' ') || 'USER'}
-          </Text>
+          <Text style={styles.profileRole} numberOfLines={1}>{roleLabel}</Text>
           <View style={styles.profileDistrict}>
             <MaterialIcons name="location-on" size={11} color={theme.colors.primaryLight} />
             <Text style={styles.profileDistrictText} numberOfLines={1}>
-              {user?.district || user?.village || 'Sri Lanka'}
+              {user?.district || user?.village || t('common.sriLanka')}
             </Text>
           </View>
         </View>
@@ -103,9 +110,8 @@ export default function DrawerContent({ onClose }: Props) {
 
       <View style={styles.divider} />
 
-      {/* ── Nav items ── */}
       <ScrollView style={styles.navScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 2 }}>
-        <Text style={styles.sectionLabel}>NAVIGATION</Text>
+        <Text style={styles.sectionLabel}>{t('nav.navigation')}</Text>
 
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.match);
@@ -137,12 +143,12 @@ export default function DrawerContent({ onClose }: Props) {
         })}
 
         <View style={styles.versionChip}>
-          <Text style={styles.versionText}>v1.0 • Elephant Protection</Text>
+          <Text style={styles.versionText}>{t('nav.version')}</Text>
         </View>
       </ScrollView>
 
-      {/* ── Logout ── */}
       <View style={styles.bottomSection}>
+        <LanguageSwitcher variant="drawer" />
         <View style={styles.divider} />
         <Pressable
           style={({ pressed }) => [styles.logoutBtn, pressed && { opacity: 0.8 }]}
@@ -151,14 +157,13 @@ export default function DrawerContent({ onClose }: Props) {
           <View style={styles.logoutIconWrap}>
             <MaterialIcons name="logout" size={18} color={theme.colors.danger} />
           </View>
-          <Text style={styles.logoutText}>Sign Out</Text>
+          <Text style={styles.logoutText}>{t('nav.signOut')}</Text>
         </Pressable>
       </View>
     </View>
   );
 }
 
-// pull mist out so StyleSheet can see it as string
 const C = theme.colors;
 
 const styles = StyleSheet.create({

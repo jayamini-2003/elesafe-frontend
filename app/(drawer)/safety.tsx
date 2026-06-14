@@ -3,6 +3,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { fontSize, fontFamily, spacing, vs } from "../../utils/responsive";
 import { theme } from "../../constants/theme";
 import AppHeader from "../../components/AppHeader";
+import { useTranslation } from "../../context/LocaleContext";
 import React, { useState } from "react";
 import {
   Alert,
@@ -74,6 +75,7 @@ function AccordionItem({
 }
 
 export default function SafetyScreen() {
+  const { t } = useTranslation();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const EMERGENCY_NUMBER = "1992";
@@ -84,9 +86,9 @@ export default function SafetyScreen() {
       await Linking.openURL(phoneUrl);
     } catch {
       Alert.alert(
-        "Emergency Number",
-        `Call ${EMERGENCY_NUMBER} immediately.\n\nIf the dialer did not open, dial manually from your phone.`,
-        [{ text: "OK" }]
+        t('safety.emergencyNumber'),
+        t('safety.sosFallback', { number: EMERGENCY_NUMBER }),
+        [{ text: t('common.ok') }]
       );
     }
   };
@@ -95,10 +97,10 @@ export default function SafetyScreen() {
     setOpenIndex((prev) => (prev === index ? null : index));
 
   const rules = [
-    { title: "Maintain Safe Distance (30m+)", icon: "straighten",      desc: "Always keep at least 30 meters away from elephants in the wild." },
-    { title: "Avoid Loud Noises",             icon: "volume-off",       desc: "Loud sounds can provoke elephants and trigger a charge unexpectedly." },
-    { title: "No Flash Photography",          icon: "no-photography",   desc: "Camera flash can scare and trigger aggressive defensive behavior." },
-    { title: "Retreat Slowly — Don't Run",    icon: "directions-walk",  desc: "Move back slowly and calmly. Running triggers a chase response." },
+    { title: t('safety.rule1Title'), icon: "straighten",      desc: t('safety.rule1Desc') },
+    { title: t('safety.rule2Title'), icon: "volume-off",       desc: t('safety.rule2Desc') },
+    { title: t('safety.rule3Title'), icon: "no-photography",   desc: t('safety.rule3Desc') },
+    { title: t('safety.rule4Title'), icon: "directions-walk",  desc: t('safety.rule4Desc') },
   ];
 
   return (
@@ -108,14 +110,13 @@ export default function SafetyScreen() {
       showsVerticalScrollIndicator={false}
     >
       <AppHeader
-        title="Safety Guidelines"
-        subtitle="Stay safe around wild elephants"
+        title={t('safety.title')}
+        subtitle={t('safety.subtitle')}
         rightIcon="warning"
         rightIconColor={C.danger}
         onRightPress={handleSOS}
       />
 
-      {/* HERO IMAGE */}
       <View style={styles.heroWrap}>
         <Image
           source={{ uri: "https://images.unsplash.com/photo-1564760055775-d63b17a55c44?q=80&w=1280" }}
@@ -124,11 +125,10 @@ export default function SafetyScreen() {
         />
         <View style={styles.heroOverlayTop} />
         <View style={styles.heroOverlay}>
-          <Text style={styles.heroText}>Staying safe around Wild Elephants</Text>
+          <Text style={styles.heroText}>{t('safety.heroTitle')}</Text>
         </View>
       </View>
 
-      {/* SOS BANNER */}
       <Pressable
         style={({ pressed }) => [styles.sosBanner, pressed && { opacity: 0.88 }]}
         onPress={handleSOS}
@@ -137,15 +137,14 @@ export default function SafetyScreen() {
           <MaterialIcons name="warning" size={22} color={C.danger} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.sosTitle}>Emergency SOS</Text>
-          <Text style={styles.sosSubtitle}>Tap to call Wildlife Hotline • {EMERGENCY_NUMBER}</Text>
+          <Text style={styles.sosTitle}>{t('safety.emergencySos')}</Text>
+          <Text style={styles.sosSubtitle}>{t('safety.tapHotline')}</Text>
         </View>
         <MaterialIcons name="chevron-right" size={22} color={C.danger} />
       </Pressable>
 
-      {/* RULES ACCORDION */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Safety Rules</Text>
+        <Text style={styles.sectionTitle}>{t('safety.safetyRules')}</Text>
         {rules.map((rule, index) => (
           <AccordionItem
             key={index}
@@ -156,11 +155,10 @@ export default function SafetyScreen() {
         ))}
       </View>
 
-      {/* VISUAL GUIDE */}
       <View style={styles.section}>
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Visual Guide</Text>
-          <Text style={styles.sectionLink}>Full Manual</Text>
+          <Text style={styles.sectionTitle}>{t('safety.visualGuide')}</Text>
+          <Text style={styles.sectionLink}>{t('safety.fullManual')}</Text>
         </View>
 
         <View style={styles.guideRow}>
@@ -172,9 +170,9 @@ export default function SafetyScreen() {
             />
             <View style={styles.guideLabel}>
               <MaterialIcons name="check-circle" size={16} color={C.primary} />
-              <Text style={[styles.guideLabelText, { color: C.primary }]}>DO</Text>
+              <Text style={[styles.guideLabelText, { color: C.primary }]}>{t('safety.doLabel')}</Text>
             </View>
-            <Text style={styles.guideDesc}>Wait quietly for crossing.</Text>
+            <Text style={styles.guideDesc}>{t('safety.doWait')}</Text>
           </View>
 
           <View style={[styles.guideCard, styles.guideCardDont]}>
@@ -185,9 +183,9 @@ export default function SafetyScreen() {
             />
             <View style={styles.guideLabel}>
               <MaterialIcons name="cancel" size={16} color={C.danger} />
-              <Text style={[styles.guideLabelText, { color: C.danger }]}>DON'T</Text>
+              <Text style={[styles.guideLabelText, { color: C.danger }]}>{t('safety.dontLabel')}</Text>
             </View>
-            <Text style={styles.guideDesc}>Attempt to touch or feed.</Text>
+            <Text style={styles.guideDesc}>{t('safety.dontTouch')}</Text>
           </View>
         </View>
       </View>
@@ -199,7 +197,6 @@ const styles = StyleSheet.create({
   screen:  { flex: 1, backgroundColor: C.bg },
   content: { paddingBottom: 40 },
 
-  /* ── Hero ── */
   heroWrap: {
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
@@ -227,7 +224,6 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
 
-  /* ── SOS Banner ── */
   sosBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -263,7 +259,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ── Sections ── */
   section: { paddingHorizontal: spacing.md, paddingTop: spacing.lg },
   sectionRow: {
     flexDirection: "row",
@@ -283,7 +278,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
 
-  /* ── Accordion ── */
   accordionWrap: {
     marginBottom: 8,
     borderRadius: 14,
@@ -333,7 +327,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
 
-  /* ── Visual Guide ── */
   guideRow: { flexDirection: "row", gap: 10 },
   guideCard: {
     flex: 1,

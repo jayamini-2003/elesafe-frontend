@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LabeledPicker } from '../../components/AppPicker';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
+import { useTranslation } from '../../context/LocaleContext';
 import { authService } from '../../services/authService';
 import { theme } from '../../constants/theme';
 import { fontFamily, fontSize, spacing, vs } from '../../utils/responsive';
@@ -67,6 +69,7 @@ const iStyles = StyleSheet.create({
 });
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     nic: '', firstName: '', lastName: '', email: '',
     phoneNumber: '', gender: '' as string, password: '',
@@ -80,9 +83,9 @@ export default function RegisterScreen() {
 
   const handleSubmit = async () => {
     if (!form.email || !form.password || !form.role || !form.gender) {
-      setError('Please fill all required fields'); return;
+      setError(t('register.fillRequired')); return;
     }
-    if (!form.district) { setError('Please select your district'); return; }
+    if (!form.district) { setError(t('register.selectDistrict')); return; }
     setLoading(true); setError('');
     try {
       const payload: any = {
@@ -99,7 +102,7 @@ export default function RegisterScreen() {
       await authService.register(payload);
       router.replace('/(drawer)/home');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err.response?.data?.message || t('register.registrationFailed'));
     } finally {
       setLoading(false);
     }
@@ -111,6 +114,10 @@ export default function RegisterScreen() {
 
       <View style={styles.heroBg}>
 
+        <View style={styles.langRow}>
+          <LanguageSwitcher variant="pill" />
+        </View>
+
         <View style={[styles.circle, styles.circle1]} />
         <View style={[styles.circle, styles.circle2]} />
         <View style={[styles.circle, styles.circle3]} />
@@ -121,8 +128,8 @@ export default function RegisterScreen() {
           <View style={styles.brandIconCircle}>
             <MaterialCommunityIcons name="elephant" size={32} color={C.sage} />
           </View>
-          <Text style={styles.brandName}>EleSafe Lanka</Text>
-          <Text style={styles.brandSub}>Create Your Account</Text>
+          <Text style={styles.brandName}>{t('common.appName')}</Text>
+          <Text style={styles.brandSub}>{t('register.createAccount')}</Text>
         </View>
 
         {/* Form card */}
@@ -143,31 +150,31 @@ export default function RegisterScreen() {
             ) : null}
 
             {/* Personal info section */}
-            <Text style={styles.sectionHeading}>Personal Info</Text>
+            <Text style={styles.sectionHeading}>{t('register.personalInfo')}</Text>
 
-            <InputField label="NIC"          icon="card-outline"          placeholder="National ID"      value={form.nic}         onChangeText={v => set('nic', v)} />
-            <InputField label="First Name"   icon="person-outline"        placeholder="First name"       value={form.firstName}   onChangeText={v => set('firstName', v)} />
-            <InputField label="Last Name"    icon="person-outline"        placeholder="Last name"        value={form.lastName}    onChangeText={v => set('lastName', v)} />
-            <InputField label="Email"        icon="mail-outline"          placeholder="Email address"    value={form.email}       onChangeText={v => set('email', v)}       keyboard="email-address" caps="none" />
-            <InputField label="Phone"        icon="call-outline"          placeholder="Phone number"     value={form.phoneNumber} onChangeText={v => set('phoneNumber', v)} keyboard="phone-pad" />
-            <InputField label="Password"     icon="lock-closed-outline"   placeholder="Create password"  value={form.password}    onChangeText={v => set('password', v)}    secure />
-            <InputField label="Address"      icon="home-outline"          placeholder="Your address"     value={form.address}     onChangeText={v => set('address', v)} />
-            <InputField label="Village"      icon="location-outline"      placeholder="Your village"     value={form.village}     onChangeText={v => set('village', v)} />
+            <InputField label={t('register.nic')}          icon="card-outline"          placeholder={t('register.nicPlaceholder')}      value={form.nic}         onChangeText={v => set('nic', v)} />
+            <InputField label={t('register.firstName')}   icon="person-outline"        placeholder={t('register.firstNamePlaceholder')}       value={form.firstName}   onChangeText={v => set('firstName', v)} />
+            <InputField label={t('register.lastName')}    icon="person-outline"        placeholder={t('register.lastNamePlaceholder')}        value={form.lastName}    onChangeText={v => set('lastName', v)} />
+            <InputField label={t('register.email')}        icon="mail-outline"          placeholder={t('register.emailPlaceholder')}    value={form.email}       onChangeText={v => set('email', v)}       keyboard="email-address" caps="none" />
+            <InputField label={t('register.phone')}        icon="call-outline"          placeholder={t('register.phonePlaceholder')}     value={form.phoneNumber} onChangeText={v => set('phoneNumber', v)} keyboard="phone-pad" />
+            <InputField label={t('register.password')}     icon="lock-closed-outline"   placeholder={t('register.passwordPlaceholder')}  value={form.password}    onChangeText={v => set('password', v)}    secure />
+            <InputField label={t('register.address')}      icon="home-outline"          placeholder={t('register.addressPlaceholder')}     value={form.address}     onChangeText={v => set('address', v)} />
+            <InputField label={t('register.village')}      icon="location-outline"      placeholder={t('register.villagePlaceholder')}     value={form.village}     onChangeText={v => set('village', v)} />
 
-            <Text style={styles.sectionHeading}>Location & Role</Text>
+            <Text style={styles.sectionHeading}>{t('register.locationRole')}</Text>
 
-            <LabeledPicker label="Gender"   value={form.gender}   onValueChange={v => set('gender', v)} filled={!!form.gender}
-              items={[{ label: 'Male', value: 'MALE' }, { label: 'Female', value: 'FEMALE' }, { label: 'Other', value: 'OTHER' }]} />
-            <LabeledPicker label="District" value={form.district} onValueChange={v => set('district', v)} filled={!!form.district}
+            <LabeledPicker label={t('register.gender')}   value={form.gender}   onValueChange={v => set('gender', v)} filled={!!form.gender}
+              items={[{ label: t('register.male'), value: 'MALE' }, { label: t('register.female'), value: 'FEMALE' }, { label: t('register.other'), value: 'OTHER' }]} />
+            <LabeledPicker label={t('register.district')} value={form.district} onValueChange={v => set('district', v)} filled={!!form.district}
               items={SRI_LANKA_DISTRICTS.map(d => ({ label: d, value: d }))} />
-            <LabeledPicker label="Role"     value={form.role}     onValueChange={v => set('role', v)} filled={!!form.role}
-              items={[{ label: 'User', value: 'User' }, { label: 'Wild Officer', value: 'Wild Officer' }]} />
+            <LabeledPicker label={t('register.role')}     value={form.role}     onValueChange={v => set('role', v)} filled={!!form.role}
+              items={[{ label: t('register.userRole'), value: 'User' }, { label: t('register.wildOfficer'), value: 'Wild Officer' }]} />
 
             {form.role === 'Wild Officer' && (
               <>
-                <Text style={styles.sectionHeading}>Officer Details</Text>
-                <InputField label="Badge Number" icon="shield-outline"   placeholder="Badge number" value={form.badgeNumber} onChangeText={v => set('badgeNumber', v)} />
-                <InputField label="Station"      icon="business-outline" placeholder="Station name" value={form.station}     onChangeText={v => set('station', v)} />
+                <Text style={styles.sectionHeading}>{t('register.officerDetails')}</Text>
+                <InputField label={t('register.badgeNumber')} icon="shield-outline"   placeholder={t('register.badgePlaceholder')} value={form.badgeNumber} onChangeText={v => set('badgeNumber', v)} />
+                <InputField label={t('register.station')}      icon="business-outline" placeholder={t('register.stationPlaceholder')} value={form.station}     onChangeText={v => set('station', v)} />
               </>
             )}
 
@@ -180,7 +187,7 @@ export default function RegisterScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Text style={styles.submitText}>Create Account</Text>
+                  <Text style={styles.submitText}>{t('register.submit')}</Text>
                   <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
                 </>
               )}
@@ -188,7 +195,7 @@ export default function RegisterScreen() {
 
             <Pressable style={styles.loginLink} onPress={() => router.replace('/(auth)/login')}>
               <Text style={styles.loginLinkText}>
-                Already have an account?  <Text style={styles.loginLinkBold}>Sign In</Text>
+                {t('register.alreadyHave')}  <Text style={styles.loginLinkBold}>{t('register.signIn')}</Text>
               </Text>
             </Pressable>
 
@@ -202,6 +209,12 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: C.primaryDark },
   heroBg: { flex: 1, backgroundColor: C.primaryDark },
+  langRow: {
+    position: 'absolute',
+    top: vs(52),
+    right: spacing.lg,
+    zIndex: 10,
+  },
 
   circle: { position: 'absolute', borderRadius: 999 },
   circle1: { width: 260, height: 260, top: -80,  left: -70,  backgroundColor: C.primary, opacity: 0.35 },

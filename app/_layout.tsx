@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AlertBanner } from "../components/AlertBanner";
 import DrawerNavigator, { DrawerRef } from "../components/DrawerNavigator";
 import { DrawerProvider, useDrawer } from "../context/DrawerContext";
+import { LocaleProvider } from "../context/LocaleContext";
 import { useAlertSocket } from "../hooks/useAlertSocket";
 import { fontSize } from "../utils/responsive";
 
@@ -81,9 +82,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <DrawerProvider>
-          <AppShell />
-        </DrawerProvider>
+        <LocaleProvider>
+          <DrawerProvider>
+            <AppShell />
+          </DrawerProvider>
+        </LocaleProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

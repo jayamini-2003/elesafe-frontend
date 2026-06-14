@@ -15,12 +15,15 @@ import {
   View,
 } from 'react-native';
 import { authService } from '../../services/authService';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
+import { useTranslation } from '../../context/LocaleContext';
 import { theme } from '../../constants/theme';
 import { fontFamily, fontSize, spacing, vs } from '../../utils/responsive';
 
 const C = theme.colors;
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPw,   setShowPw]   = useState(false);
@@ -29,13 +32,13 @@ export default function LoginScreen() {
   const [focusedField, setFocused] = useState<string | null>(null);
 
   const handleLogin = async () => {
-    if (!email || !password) { setError('Please enter email and password'); return; }
+    if (!email || !password) { setError(t('login.enterCredentials')); return; }
     setLoading(true); setError('');
     try {
       await authService.login({ email, password });
       router.replace('/(drawer)/home');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || t('login.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -50,6 +53,9 @@ export default function LoginScreen() {
 
       {/* ── Hero section with decorative circles ── */}
       <View style={styles.heroBg}>
+        <View style={styles.langRow}>
+          <LanguageSwitcher variant="pill" />
+        </View>
 
         <View style={[styles.circle, styles.circle1]} />
         <View style={[styles.circle, styles.circle2]} />
@@ -61,8 +67,8 @@ export default function LoginScreen() {
           <View style={styles.brandIconCircle}>
             <MaterialCommunityIcons name="elephant" size={40} color={C.sage} />
           </View>
-          <Text style={styles.brandName}>EleSafe Lanka</Text>
-          <Text style={styles.brandSub}>Wildlife Alert System</Text>
+          <Text style={styles.brandName}>{t('common.appName')}</Text>
+          <Text style={styles.brandSub}>{t('common.tagline')}</Text>
         </View>
 
         {/* ── Form card ── */}
@@ -75,8 +81,8 @@ export default function LoginScreen() {
 
             <View style={styles.cardHandle} />
 
-            <Text style={styles.welcome}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
+            <Text style={styles.welcome}>{t('login.welcomeBack')}</Text>
+            <Text style={styles.subtitle}>{t('login.signInContinue')}</Text>
 
             {error ? (
               <View style={styles.errorBox}>
@@ -89,7 +95,7 @@ export default function LoginScreen() {
             <View style={[styles.inputWrap, focusedField === 'email' && styles.inputFocused]}>
               <Ionicons name="mail-outline" size={20} color={focusedField === 'email' ? C.primary : C.placeholder} />
               <TextInput
-                placeholder="Email address"
+                placeholder={t('login.emailPlaceholder')}
                 placeholderTextColor={C.placeholder}
                 style={styles.input}
                 value={email}
@@ -106,7 +112,7 @@ export default function LoginScreen() {
             <View style={[styles.inputWrap, focusedField === 'password' && styles.inputFocused]}>
               <Ionicons name="lock-closed-outline" size={20} color={focusedField === 'password' ? C.primary : C.placeholder} />
               <TextInput
-                placeholder="Password"
+                placeholder={t('login.passwordPlaceholder')}
                 placeholderTextColor={C.placeholder}
                 secureTextEntry={!showPw}
                 style={styles.input}
@@ -125,7 +131,7 @@ export default function LoginScreen() {
             </View>
 
             <Pressable style={styles.forgotWrap}>
-              <Text style={styles.forgot}>Forgot Password?</Text>
+              <Text style={styles.forgot}>{t('login.forgotPassword')}</Text>
             </Pressable>
 
             {/* Login button */}
@@ -138,7 +144,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Text style={styles.loginText}>Sign In</Text>
+                  <Text style={styles.loginText}>{t('login.signIn')}</Text>
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
                 </>
               )}
@@ -147,7 +153,7 @@ export default function LoginScreen() {
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>{t('common.or')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -156,7 +162,7 @@ export default function LoginScreen() {
               onPress={() => router.push('/(auth)/register')}
             >
               <Text style={styles.registerText}>
-                New here?  <Text style={styles.registerLink}>Create Account</Text>
+                {t('login.newHere')}  <Text style={styles.registerLink}>{t('login.createAccount')}</Text>
               </Text>
             </Pressable>
 
@@ -171,6 +177,12 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: C.primaryDark },
 
   heroBg: { flex: 1, backgroundColor: C.primaryDark },
+  langRow: {
+    position: 'absolute',
+    top: vs(52),
+    right: spacing.lg,
+    zIndex: 10,
+  },
 
   circle: { position: 'absolute', borderRadius: 999 },
   circle1: { width: 300, height: 300, top: -100, right: -80, backgroundColor: C.primary, opacity: 0.35 },

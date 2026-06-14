@@ -1,5 +1,6 @@
 import { Picker } from '@react-native-picker/picker';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from '../context/LocaleContext';
 import { theme } from '../constants/theme';
 import { fontFamily, fontSize, spacing } from '../utils/responsive';
 
@@ -25,9 +26,12 @@ export function AppPicker({
   selectedValue,
   onValueChange,
   items,
-  placeholder = 'Select',
+  placeholder,
   filled = false,
 }: AppPickerProps) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('common.select');
+
   return (
     <View style={[styles.box, filled && styles.boxFilled]}>
       <Picker
@@ -42,9 +46,8 @@ export function AppPicker({
             : undefined
         }
       >
-        {/* Placeholder item */}
         <Picker.Item
-          label={placeholder}
+          label={resolvedPlaceholder}
           value=""
           color={PICKER_COLORS.text}
           style={styles.pickerItem}
@@ -69,10 +72,11 @@ export function AppPicker({
 type LabeledPickerProps = AppPickerProps & { label: string };
 
 export function LabeledPicker({ label, ...props }: LabeledPickerProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.labeledWrap}>
       <Text style={styles.labeledLabel}>{label}</Text>
-      <AppPicker {...props} placeholder={`Select ${label}`} />
+      <AppPicker {...props} placeholder={t('common.selectLabel', { label })} />
     </View>
   );
 }
@@ -95,7 +99,6 @@ const styles = StyleSheet.create({
     minHeight: 52,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
-    // Force white bg even in dark mode
     ...(Platform.OS === 'android' ? { elevation: 0 } : {}),
   },
   boxFilled: {
@@ -108,7 +111,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     ...(Platform.OS === 'android' ? { height: 50 } : { height: 48 }),
   },
-  // ── This is the key fix: forces white bg + black text in the dropdown popup ──
   pickerItem: {
     backgroundColor: '#FFFFFF',
     color: '#1A1A1A',

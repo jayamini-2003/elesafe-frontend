@@ -10,21 +10,23 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { AppHeaderLogo } from '../../components/AppHeader';
+import { useTranslation } from '../../context/LocaleContext';
 import { theme } from '../../constants/theme';
 import { useAlertSocket } from '../../hooks/useAlertSocket';
 import { authService } from '../../services/authService';
 import { uploadProfilePicture } from '../../services/supabase';
 import { fontFamily, fontSize, spacing, vs } from '../../utils/responsive';
 
-function timeAgo(receivedAt: number): string {
-  const diff = Math.floor((Date.now() - receivedAt) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
 export default function Home() {
+  const { t } = useTranslation();
+
+  const timeAgo = (receivedAt: number): string => {
+    const diff = Math.floor((Date.now() - receivedAt) / 1000);
+    if (diff < 60) return t('common.secondsAgo', { count: diff });
+    if (diff < 3600) return t('common.minutesAgo', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('common.hoursAgo', { count: Math.floor(diff / 3600) });
+    return t('common.daysAgo', { count: Math.floor(diff / 86400) });
+  };
   const [region, setRegion] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -63,7 +65,9 @@ export default function Home() {
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good Morning 🌅'; if (h < 17) return 'Good Afternoon ☀️'; return 'Good Evening 👋';
+    if (h < 12) return t('home.goodMorning');
+    if (h < 17) return t('home.goodAfternoon');
+    return t('home.goodEvening');
   };
 
   const openProfile = () => {
@@ -73,7 +77,7 @@ export default function Home() {
 
   const pickAndUploadPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert('Permission required', 'Allow gallery access to change photo'); return; }
+    if (!perm.granted) { Alert.alert(t('common.permissionRequired'), t('home.galleryPermission')); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (result.canceled) return;
     try {
@@ -82,20 +86,25 @@ export default function Home() {
       setForm(f => ({ ...f, profilePicture: publicUrl })); setUser((u: any) => ({ ...u, profilePicture: publicUrl }));
       const updated = await authService.updateProfile({ firstName: form.firstName || user?.firstName || '', lastName: form.lastName || user?.lastName || '', phoneNumber: form.phoneNumber || user?.phoneNumber || '', village: form.village || user?.village || '', profilePicture: publicUrl });
       setUser(updated); setForm(f => ({ ...f, profilePicture: updated.profilePicture || publicUrl }));
-      Alert.alert('✅ Photo updated', 'Profile picture changed successfully');
-    } catch (err: any) { Alert.alert('Upload failed', err.message || 'Could not upload image'); } finally { setUploadingPhoto(false); }
+      Alert.alert(t('home.photoUpdated'), t('home.photoUpdateSuccess'));
+    } catch (err: any) { Alert.alert(t('home.uploadFailed'), err.message || t('home.uploadFailed')); } finally { setUploadingPhoto(false); }
   };
 
   const handleSave = async () => {
-    try { setSaving(true); const updated = await authService.updateProfile(form); setUser(updated); setEditMode(false); Alert.alert('Saved', 'Profile updated successfully'); }
-    catch (error: any) { Alert.alert('Error', error.response?.data?.message || 'Update failed'); } finally { setSaving(false); }
+    try { setSaving(true); const updated = await authService.updateProfile(form); setUser(updated); setEditMode(false); Alert.alert(t('home.saved'), t('home.profileUpdated')); }
+    catch (error: any) { Alert.alert(t('common.error'), error.response?.data?.message || t('home.updateFailed')); } finally { setSaving(false); }
   };
 
   const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Logout', style: 'destructive', onPress: async () => { await authService.logout(); setShowProfile(false); router.replace('/(auth)/login'); } }]);
+    Alert.alert(t('home.logout'), t('home.logoutConfirm'), [{ text: t('common.cancel'), style: 'cancel' }, { text: t('home.logout'), style: 'destructive', onPress: async () => { await authService.logout(); setShowProfile(false); router.replace('/(auth)/login'); } }]);
   };
 
-  const fullName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'User';
+  const fullName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : t('common.user');
+  const formatBehavior = (b: string) => {
+    const key = `map.behaviors.${b}`;
+    return t(key) !== key ? t(key) : b;
+  };
+  const roleLabel = user?.role ? (t(`roles.${user.role}`) !== `roles.${user.role}` ? t(`roles.${user.role}`) : user.role.replace('_', ' ')) : t('roles.USER');
   const currentPicture = editMode ? form.profilePicture : user?.profilePicture;
 
   return (
@@ -125,13 +134,13 @@ export default function Home() {
             <Text style={styles.heroName}>{fullName}</Text>
             <MaterialIcons name="chevron-right" size={20} color={C.mist} />
           </View>
-          <Text style={styles.heroLocation}>📍 {user?.village || 'Location not set'}</Text>
+          <Text style={styles.heroLocation}>📍 {user?.village || t('home.locationNotSet')}</Text>
         </View>
 
         {/* Status chip */}
         <View style={styles.statusChip}>
           <View style={styles.statusChipDot} />
-          <Text style={styles.statusChipText}>Safe</Text>
+          <Text style={styles.statusChipText}>{t('home.safe')}</Text>
         </View>
       </Pressable>
 
@@ -139,17 +148,17 @@ export default function Home() {
       <View style={styles.statsRow}>
         <View style={styles.statChip}>
           <MaterialCommunityIcons name="map-marker-radius" size={14} color={C.primary} />
-          <Text style={styles.statChipText}>Active Zone</Text>
+          <Text style={styles.statChipText}>{t('home.activeZone')}</Text>
         </View>
         <View style={[styles.statChip, unreadCount > 0 && styles.statChipAlert]}>
           <MaterialIcons name="notifications-active" size={14} color={unreadCount > 0 ? C.warning : C.primary} />
           <Text style={[styles.statChipText, unreadCount > 0 && { color: C.warning }]}>
-            {unreadCount > 0 ? `${unreadCount} Alerts` : 'No Alerts'}
+            {unreadCount > 0 ? t('common.alerts', { count: unreadCount }) : t('common.noAlerts')}
           </Text>
         </View>
         <View style={styles.statChip}>
           <MaterialCommunityIcons name="shield-check" size={14} color={C.primary} />
-          <Text style={styles.statChipText}>System Active</Text>
+          <Text style={styles.statChipText}>{t('home.systemActive')}</Text>
         </View>
       </View>
 
@@ -158,15 +167,15 @@ export default function Home() {
         <View style={styles.reportCardAccent} />
         <View style={styles.reportCardBody}>
           <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>Report Incident</Text>
+            <Text style={styles.cardTitle}>{t('home.reportIncident')}</Text>
             <View style={styles.warningIconWrap}>
               <MaterialIcons name="warning" size={20} color={C.warning} />
             </View>
           </View>
-          <Text style={styles.description}>Spotted an elephant nearby? Report it immediately to protect your community.</Text>
+          <Text style={styles.description}>{t('home.reportDesc')}</Text>
           <Pressable style={styles.reportBtn} onPress={() => router.push('/(drawer)/report')}>
             <MaterialIcons name="camera-alt" size={18} color={C.cream} />
-            <Text style={styles.reportBtnText}>REPORT SIGHTING</Text>
+            <Text style={styles.reportBtnText}>{t('home.reportSighting')}</Text>
           </Pressable>
         </View>
       </View>
@@ -184,15 +193,15 @@ export default function Home() {
           ) : (
             <View style={styles.mapPlaceholder}>
               <ActivityIndicator color={C.primary} />
-              <Text style={styles.mapPlaceholderText}>Loading map…</Text>
+              <Text style={styles.mapPlaceholderText}>{t('home.loadingMap')}</Text>
             </View>
           )}
           <View style={styles.mapOverlay}>
             <MaterialCommunityIcons name="map-marker-radius" size={14} color={C.cream} style={{ marginRight: 4 }} />
-            <Text style={styles.mapLabel}>Live Map View</Text>
+            <Text style={styles.mapLabel}>{t('home.liveMapView')}</Text>
           </View>
           <Pressable style={styles.expandBtn} onPress={() => router.push('/(drawer)/map')}>
-            <Text style={styles.expandText}>Expand ↗</Text>
+            <Text style={styles.expandText}>{t('common.expand')}</Text>
           </Pressable>
         </Pressable>
       </View>
@@ -200,9 +209,9 @@ export default function Home() {
       {/* ── Recent Alerts ── */}
       <View style={styles.section}>
         <View style={styles.rowBetween}>
-          <Text style={styles.sectionTitle}>Recent Alerts</Text>
+          <Text style={styles.sectionTitle}>{t('home.recentAlerts')}</Text>
           <Pressable onPress={() => router.push('/notifications')}>
-            <Text style={styles.viewAll}>View All</Text>
+            <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
           </Pressable>
         </View>
         <Pressable
@@ -217,12 +226,12 @@ export default function Home() {
             {latestLiveAlert ? (
               <>
                 <Text style={styles.alertText}>🐘 {latestLiveAlert.village}, {latestLiveAlert.district}</Text>
-                <Text style={styles.alertSub}>{timeAgo(latestLiveAlert.receivedAt)} · {latestLiveAlert.numberOfElephants} elephant{latestLiveAlert.numberOfElephants > 1 ? 's' : ''} · {latestLiveAlert.behavior}</Text>
+                <Text style={styles.alertSub}>{timeAgo(latestLiveAlert.receivedAt)} · {t('common.elephants', { count: latestLiveAlert.numberOfElephants })} · {formatBehavior(latestLiveAlert.behavior)}</Text>
               </>
             ) : (
               <>
-                <Text style={styles.alertText}>No recent alerts</Text>
-                <Text style={styles.alertSub}>All clear in your area</Text>
+                <Text style={styles.alertText}>{t('home.noRecentAlerts')}</Text>
+                <Text style={styles.alertSub}>{t('home.allClear')}</Text>
               </>
             )}
           </View>
@@ -234,14 +243,14 @@ export default function Home() {
 
       {/* ── Safety & Community ── */}
       <View style={[styles.section, { marginBottom: 32 }]}>
-        <Text style={styles.sectionTitle}>Safety & Community</Text>
+        <Text style={styles.sectionTitle}>{t('home.safetyCommunity')}</Text>
         <Pressable style={styles.safetyCard} onPress={() => router.push('/(drawer)/safety')}>
           <View style={styles.safetyIconWrap}>
             <MaterialIcons name="wb-sunny" size={22} color={C.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.safetyTitle}>Night Safety</Text>
-            <Text style={styles.safetyText}>Stay indoors and avoid forest edges after dark.</Text>
+            <Text style={styles.safetyTitle}>{t('home.nightSafety')}</Text>
+            <Text style={styles.safetyText}>{t('home.nightSafetyDesc')}</Text>
           </View>
           <MaterialIcons name="chevron-right" size={18} color={C.mist} />
         </Pressable>
@@ -261,16 +270,16 @@ export default function Home() {
               {editMode ? (
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <Pressable onPress={() => setEditMode(false)} style={styles.cancelEditBtn}>
-                    <Text style={styles.cancelEditText}>Cancel</Text>
+                    <Text style={styles.cancelEditText}>{t('common.cancel')}</Text>
                   </Pressable>
                   <Pressable onPress={handleSave} disabled={saving} style={styles.saveBtn}>
-                    {saving ? <ActivityIndicator size="small" color={C.cream} /> : <Text style={styles.saveBtnText}>Save</Text>}
+                    {saving ? <ActivityIndicator size="small" color={C.cream} /> : <Text style={styles.saveBtnText}>{t('common.save')}</Text>}
                   </Pressable>
                 </View>
               ) : (
                 <Pressable onPress={() => setEditMode(true)} style={styles.editBtn}>
                   <MaterialIcons name="edit" size={15} color={C.primary} />
-                  <Text style={styles.editBtnText}>Edit Profile</Text>
+                  <Text style={styles.editBtnText}>{t('home.editProfile')}</Text>
                 </Pressable>
               )}
             </View>
@@ -288,24 +297,24 @@ export default function Home() {
               </Pressable>
             </View>
 
-            <Text style={styles.photoHint}>{uploadingPhoto ? 'Uploading...' : 'Tap camera to change photo'}</Text>
+            <Text style={styles.photoHint}>{uploadingPhoto ? t('home.uploading') : t('home.tapCamera')}</Text>
             <Text style={styles.profileModalName}>{fullName}</Text>
             <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{user?.role?.replace('_', ' ') || 'USER'}</Text>
+              <Text style={styles.roleText}>{roleLabel}</Text>
             </View>
             <View style={styles.divider} />
 
-            <ProfileRow icon="credit-card" label="NIC" value={user?.nic || '—'} editable={false} />
-            <ProfileRow icon="email" label="Email" value={user?.email || '—'} editable={false} />
-            <ProfileRow icon="person" label="First Name" value={form.firstName} editable={editMode} onChangeText={v => setForm(f => ({ ...f, firstName: v }))} />
-            <ProfileRow icon="person-outline" label="Last Name" value={form.lastName} editable={editMode} onChangeText={v => setForm(f => ({ ...f, lastName: v }))} />
-            <ProfileRow icon="phone" label="Phone" value={form.phoneNumber} editable={editMode} keyboardType="phone-pad" onChangeText={v => setForm(f => ({ ...f, phoneNumber: v }))} />
-            <ProfileRow icon="location-city" label="Village" value={form.village} editable={editMode} onChangeText={v => setForm(f => ({ ...f, village: v }))} />
+            <ProfileRow icon="credit-card" label={t('register.nic')} value={user?.nic || '—'} editable={false} />
+            <ProfileRow icon="email" label={t('register.email')} value={user?.email || '—'} editable={false} />
+            <ProfileRow icon="person" label={t('register.firstName')} value={form.firstName} editable={editMode} onChangeText={v => setForm(f => ({ ...f, firstName: v }))} />
+            <ProfileRow icon="person-outline" label={t('register.lastName')} value={form.lastName} editable={editMode} onChangeText={v => setForm(f => ({ ...f, lastName: v }))} />
+            <ProfileRow icon="phone" label={t('register.phone')} value={form.phoneNumber} editable={editMode} keyboardType="phone-pad" onChangeText={v => setForm(f => ({ ...f, phoneNumber: v }))} />
+            <ProfileRow icon="location-city" label={t('register.village')} value={form.village} editable={editMode} onChangeText={v => setForm(f => ({ ...f, village: v }))} />
 
             <View style={styles.divider} />
             <Pressable style={styles.logoutBtn} onPress={handleLogout}>
               <MaterialIcons name="logout" size={20} color={C.cream} />
-              <Text style={styles.logoutText}>Logout</Text>
+              <Text style={styles.logoutText}>{t('home.logout')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

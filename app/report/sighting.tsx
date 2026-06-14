@@ -19,6 +19,8 @@ import { ElephantBehavior, reportService } from "../../services/reportService";
 import { fontSize, fontFamily, spacing, vs } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
 import { AppPicker } from "../../components/AppPicker";
+import { useTranslation } from "../../context/LocaleContext";
+import { localizeGpsError } from "../../i18n";
 import { uploadReportImage } from "../../services/supabase";
 import { fetchCurrentLocation } from "../../utils/locationHelper";
 
@@ -31,7 +33,15 @@ const SRI_LANKA_DISTRICTS = [
   "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
 ];
 
+const BEHAVIOR_OPTIONS = [
+  { value: "Walking", labelKey: "sightingForm.walking" },
+  { value: "Eating", labelKey: "sightingForm.eating" },
+  { value: "Aggressive", labelKey: "sightingForm.aggressive" },
+  { value: "Crossing Road", labelKey: "sightingForm.crossingRoad" },
+] as const;
+
 export default function SightingReport() {
+  const { t } = useTranslation();
   const [count, setCount]               = useState(1);
   const [behavior, setBehavior]         = useState("Walking");
   const [image, setImage]               = useState<string | null>(null);
@@ -39,10 +49,13 @@ export default function SightingReport() {
   const [village, setVillage]           = useState("");
   const [notes, setNotes]               = useState("");
   const [loading, setLoading]           = useState(false);
-  const [locationText, setLocationText] = useState("Tap GPS to get location");
+  const [locationText, setLocationText] = useState("");
   const [gpsLoading, setGpsLoading]     = useState(false);
   const [coords, setCoords]             = useState<{ latitude: number; longitude: number } | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const gpsPlaceholder = t("sightingForm.tapGps");
+  const displayLocationText = locationText || gpsPlaceholder;
 
   const getLocation = async () => {
     try {
@@ -53,38 +66,50 @@ export default function SightingReport() {
       if (result.village) setVillage(result.village);
       setLocationText(result.locationText);
     } catch (error: any) {
-      Alert.alert("GPS Error", error?.message || "Could not get location. Try again.");
+      Alert.alert(
+        t("sightingForm.gpsError"),
+        localizeGpsError(error?.message || "", t),
+      );
     } finally {
       setGpsLoading(false);
     }
   };
 
   const pickImage = () => {
-    Alert.alert("Add Photo", "Choose a source", [
+    Alert.alert(t("sightingForm.addPhotoTitle"), t("sightingForm.chooseSource"), [
       {
-        text: "Camera",
+        text: t("sightingForm.camera"),
         onPress: async () => {
           const permission = await ImagePicker.requestCameraPermissionsAsync();
-          if (!permission.granted) { Alert.alert("Permission required", "Allow camera access to take a photo"); return; }
+          if (!permission.granted) {
+            Alert.alert(t("common.permissionRequired"), t("sightingForm.cameraPermission"));
+            return;
+          }
           const res = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
           if (!res.canceled) setImage(res.assets[0].uri);
         },
       },
       {
-        text: "Gallery",
+        text: t("sightingForm.gallery"),
         onPress: async () => {
           const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!permission.granted) { Alert.alert("Permission required", "Allow gallery access to attach a photo"); return; }
+          if (!permission.granted) {
+            Alert.alert(t("common.permissionRequired"), t("sightingForm.galleryPermission"));
+            return;
+          }
           const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
           if (!res.canceled) setImage(res.assets[0].uri);
         },
       },
-      { text: "Cancel", style: "cancel" },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
   };
 
   const submit = async () => {
-    if (!district || !village) { Alert.alert("Missing Info", "Please select district and enter village"); return; }
+    if (!district || !village) {
+      Alert.alert(t("sightingForm.missingInfo"), t("sightingForm.missingDistrictVillage"));
+      return;
+    }
     try {
       setLoading(true);
       let imageUrl: string | undefined = undefined;
@@ -99,10 +124,10 @@ export default function SightingReport() {
         behavior: behaviorMap[behavior] ?? "CALM",
         additionalNotes: notes, imagePath: imageUrl,
       });
-      Alert.alert("Success", "Sighting Report Submitted");
+      Alert.alert(t("sightingForm.successTitle"), t("sightingForm.submitted"));
       router.back();
     } catch (error: any) {
-      Alert.alert("Error", error.response?.data?.message || "Submission failed");
+      Alert.alert(t("common.error"), error.response?.data?.message || t("sightingForm.submitError"));
     } finally {
       setLoading(false);
     }
@@ -111,7 +136,7 @@ export default function SightingReport() {
   const clear = () => {
     setCount(1); setBehavior("Walking"); setImage(null);
     setDistrict(""); setVillage(""); setNotes("");
-    setLocationText("Tap GPS to get location"); setCoords(null);
+    setLocationText(""); setCoords(null);
   };
 
   const fieldStyle = (field: string) => ({
@@ -122,8 +147,8 @@ export default function SightingReport() {
   return (
     <View style={styles.screen}>
       <AppHeader
-        title="Report Sighting"
-        subtitle="Elephant sighting"
+        title={t("sightingForm.title")}
+        subtitle={t("sightingForm.subtitle")}
         mode="back"
         rightIcon="close"
         rightIconColor={C.danger}
@@ -135,7 +160,7 @@ export default function SightingReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>LOCATION</Text>
+            <Text style={styles.sectionLabel}>{t("sightingForm.location")}</Text>
           </View>
 
           <View style={styles.mapBox}>
@@ -147,12 +172,12 @@ export default function SightingReport() {
                 <Text style={styles.coordsText}>
                   {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
                 </Text>
-                <Text style={styles.coordsSub} numberOfLines={2}>{locationText}</Text>
+                <Text style={styles.coordsSub} numberOfLines={2}>{displayLocationText}</Text>
               </View>
             ) : (
               <View style={styles.mapPlaceholder}>
                 <MaterialIcons name="map" size={36} color={C.border} />
-                <Text style={styles.mapPlaceholderText}>Tap GPS to show location on map</Text>
+                <Text style={styles.mapPlaceholderText}>{t("sightingForm.tapGpsMap")}</Text>
               </View>
             )}
           </View>
@@ -163,7 +188,7 @@ export default function SightingReport() {
               <AppPicker
                 selectedValue={district}
                 onValueChange={setDistrict}
-                placeholder="Select District"
+                placeholder={t("sightingForm.selectDistrict")}
                 filled={!!district}
                 items={SRI_LANKA_DISTRICTS.map((d) => ({ label: d, value: d }))}
               />
@@ -173,7 +198,7 @@ export default function SightingReport() {
           <View style={[styles.inputField, fieldStyle('village'), { marginTop: 10 }]}>
             <MaterialIcons name="location-city" size={18} color={focusedField === 'village' ? C.primary : C.textMuted} />
             <TextInput
-              placeholder="Village (e.g. Sigiriya)"
+              placeholder={t("sightingForm.villagePlaceholder")}
               placeholderTextColor={C.textMuted}
               value={village} onChangeText={setVillage}
               onFocus={() => setFocusedField('village')}
@@ -184,11 +209,11 @@ export default function SightingReport() {
 
           <View style={styles.gpsPill}>
             <MaterialIcons name="my-location" size={15} color={C.primary} />
-            <Text style={styles.gpsPillText} numberOfLines={1}>{locationText}</Text>
+            <Text style={styles.gpsPillText} numberOfLines={1}>{displayLocationText}</Text>
             <Pressable onPress={getLocation} disabled={gpsLoading} style={styles.gpsBtn}>
               {gpsLoading
                 ? <ActivityIndicator size="small" color={C.surface} />
-                : <Text style={styles.gpsBtnText}>GPS</Text>}
+                : <Text style={styles.gpsBtnText}>{t("sightingForm.gps")}</Text>}
             </Pressable>
           </View>
         </View>
@@ -197,10 +222,10 @@ export default function SightingReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>THE ANIMALS</Text>
+            <Text style={styles.sectionLabel}>{t("sightingForm.animals")}</Text>
           </View>
 
-          <Text style={styles.fieldLabel}>HOW MANY ELEPHANTS?</Text>
+          <Text style={styles.fieldLabel}>{t("sightingForm.howMany")}</Text>
           <View style={styles.counter}>
             <Pressable onPress={() => setCount(Math.max(1, count - 1))} style={styles.counterBtn}>
               <Text style={styles.counterMinus}>−</Text>
@@ -211,16 +236,16 @@ export default function SightingReport() {
             </Pressable>
           </View>
 
-          <Text style={[styles.fieldLabel, { marginTop: spacing.sm }]}>WHAT ARE THEY DOING?</Text>
+          <Text style={[styles.fieldLabel, { marginTop: spacing.sm }]}>{t("sightingForm.whatDoing")}</Text>
           <View style={styles.tags}>
-            {["Walking", "Eating", "Aggressive", "Crossing Road"].map((item) => (
+            {BEHAVIOR_OPTIONS.map(({ value, labelKey }) => (
               <Pressable
-                key={item}
-                onPress={() => setBehavior(item)}
-                style={[styles.tag, behavior === item && styles.activeTag]}
+                key={value}
+                onPress={() => setBehavior(value)}
+                style={[styles.tag, behavior === value && styles.activeTag]}
               >
-                <Text style={[styles.tagText, behavior === item && styles.activeTagText]}>
-                  {item}
+                <Text style={[styles.tagText, behavior === value && styles.activeTagText]}>
+                  {t(labelKey)}
                 </Text>
               </Pressable>
             ))}
@@ -231,10 +256,10 @@ export default function SightingReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>ADDITIONAL NOTES</Text>
+            <Text style={styles.sectionLabel}>{t("sightingForm.notes")}</Text>
           </View>
           <TextInput
-            placeholder="Any extra details..."
+            placeholder={t("sightingForm.extraDetails")}
             placeholderTextColor={C.textMuted}
             value={notes} onChangeText={setNotes}
             multiline
@@ -248,7 +273,7 @@ export default function SightingReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>EVIDENCE</Text>
+            <Text style={styles.sectionLabel}>{t("sightingForm.evidence")}</Text>
           </View>
           <Pressable onPress={pickImage} style={[styles.imageSlot, image ? styles.imageSlotFilled : null]}>
             {image ? (
@@ -261,7 +286,7 @@ export default function SightingReport() {
             ) : (
               <>
                 <MaterialIcons name="add-a-photo" size={28} color={C.textMuted} />
-                <Text style={styles.imageSlotLabel}>Add Photo</Text>
+                <Text style={styles.imageSlotLabel}>{t("sightingForm.addPhoto")}</Text>
               </>
             )}
           </Pressable>
@@ -270,12 +295,12 @@ export default function SightingReport() {
         {/* ── ACTION BUTTONS ── */}
         <View style={styles.buttonRow}>
           <Pressable style={styles.clearBtn} onPress={clear}>
-            <Text style={styles.clearText}>Clear</Text>
+            <Text style={styles.clearText}>{t("common.clear")}</Text>
           </Pressable>
           <Pressable style={styles.submitBtn} onPress={submit} disabled={loading}>
             {loading
               ? <ActivityIndicator color={C.surface} />
-              : <Text style={styles.submitText}>Submit Report</Text>}
+              : <Text style={styles.submitText}>{t("sightingForm.submit")}</Text>}
           </Pressable>
         </View>
 

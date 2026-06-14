@@ -21,6 +21,8 @@ import { fontSize, fontFamily, spacing, vs } from "../../utils/responsive";
 import AppHeader from "../../components/AppHeader";
 import { AppPicker } from "../../components/AppPicker";
 import { fetchCurrentLocation } from "../../utils/locationHelper";
+import { useTranslation } from "../../context/LocaleContext";
+import { localizeGpsError } from "../../i18n";
 
 const C = theme.colors;
 
@@ -31,20 +33,30 @@ const SRI_LANKA_DISTRICTS = [
   "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
 ];
 
+const DAMAGE_TYPE_OPTIONS = [
+  { value: "Property Damage", labelKey: "damageForm.propertyDamage" },
+  { value: "Crop / Field Damage", labelKey: "damageForm.cropDamage" },
+  { value: "Fence Damage", labelKey: "damageForm.fenceDamage" },
+  { value: "Vehicle Damage", labelKey: "damageForm.vehicleDamage" },
+] as const;
+
 export default function DamageReport() {
+  const { t } = useTranslation();
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [description, setDescription]     = useState("");
   const [image, setImage]                 = useState<string | null>(null);
-  const [locationText, setLocationText]   = useState("Tap GPS to get location");
+  const [locationText, setLocationText]   = useState("");
   const [district, setDistrict]           = useState("");
   const [village, setVillage]             = useState("");
   const [loading, setLoading]             = useState(false);
   const [gpsLoading, setGpsLoading]       = useState(false);
   const [focusedField, setFocusedField]   = useState<string | null>(null);
 
+  const displayLocationText = locationText || t("damageForm.tapGps");
+
   const toggleType = (type: string) => {
     setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+      prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type]
     );
   };
 
@@ -56,40 +68,58 @@ export default function DamageReport() {
       if (result.village) setVillage(result.village);
       setLocationText(result.locationText);
     } catch (error: any) {
-      Alert.alert("GPS Error", error?.message || "Could not get location. Try again.");
+      Alert.alert(
+        t("damageForm.gpsError"),
+        localizeGpsError(error?.message || "", t),
+      );
     } finally {
       setGpsLoading(false);
     }
   };
 
   const pickImage = () => {
-    Alert.alert("Add Photo", "Choose a source", [
+    Alert.alert(t("damageForm.addPhotoTitle"), t("damageForm.chooseSource"), [
       {
-        text: "Camera",
+        text: t("damageForm.camera"),
         onPress: async () => {
           const permission = await ImagePicker.requestCameraPermissionsAsync();
-          if (!permission.granted) { Alert.alert("Permission required", "Allow camera access to take a photo"); return; }
+          if (!permission.granted) {
+            Alert.alert(t("common.permissionRequired"), t("damageForm.cameraPermission"));
+            return;
+          }
           const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
           if (!result.canceled) setImage(result.assets[0].uri);
         },
       },
       {
-        text: "Gallery",
+        text: t("damageForm.gallery"),
         onPress: async () => {
           const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!permission.granted) { Alert.alert("Permission required", "Allow gallery access to attach a photo"); return; }
+          if (!permission.granted) {
+            Alert.alert(t("common.permissionRequired"), t("damageForm.galleryPermission"));
+            return;
+          }
           const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
           if (!result.canceled) setImage(result.assets[0].uri);
         },
       },
-      { text: "Cancel", style: "cancel" },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
   };
 
   const submit = async () => {
-    if (!district)               { Alert.alert("Missing Info", "Please select district"); return; }
-    if (!village)                { Alert.alert("Missing Info", "Please enter village"); return; }
-    if (selectedTypes.length === 0) { Alert.alert("Missing Info", "Please select at least one damage type"); return; }
+    if (!district) {
+      Alert.alert(t("damageForm.missingInfo"), t("damageForm.missingDistrict"));
+      return;
+    }
+    if (!village) {
+      Alert.alert(t("damageForm.missingInfo"), t("damageForm.missingVillage"));
+      return;
+    }
+    if (selectedTypes.length === 0) {
+      Alert.alert(t("damageForm.missingInfo"), t("damageForm.missingTypes"));
+      return;
+    }
     try {
       setLoading(true);
       let imageUrl: string | undefined = undefined;
@@ -105,10 +135,10 @@ export default function DamageReport() {
         damageType: damageTypeMap[selectedTypes[0]],
         description, imagePath: imageUrl,
       });
-      Alert.alert("Submitted", "Damage report sent successfully");
+      Alert.alert(t("damageForm.successTitle"), t("damageForm.successMsg"));
       router.back();
     } catch (error: any) {
-      Alert.alert("Error", error.response?.data?.message || "Submission failed");
+      Alert.alert(t("common.error"), error.response?.data?.message || t("damageForm.submitError"));
     } finally {
       setLoading(false);
     }
@@ -116,10 +146,8 @@ export default function DamageReport() {
 
   const clear = () => {
     setSelectedTypes([]); setDescription(""); setImage(null);
-    setDistrict(""); setVillage(""); setLocationText("Tap GPS to get location");
+    setDistrict(""); setVillage(""); setLocationText("");
   };
-
-  const DAMAGE_TYPES = ["Property Damage", "Crop / Field Damage", "Fence Damage", "Vehicle Damage"];
 
   const fieldStyle = (field: string) => ({
     borderColor: focusedField === field ? C.primary : C.border,
@@ -129,8 +157,8 @@ export default function DamageReport() {
   return (
     <View style={styles.screen}>
       <AppHeader
-        title="Report Damage"
-        subtitle="Property / crop damage"
+        title={t("damageForm.title")}
+        subtitle={t("damageForm.subtitle")}
         mode="back"
         rightIcon="close"
         rightIconColor={C.danger}
@@ -143,7 +171,7 @@ export default function DamageReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>LOCATION</Text>
+            <Text style={styles.sectionLabel}>{t("damageForm.location")}</Text>
           </View>
 
           <View style={styles.pickerRow}>
@@ -152,7 +180,7 @@ export default function DamageReport() {
               <AppPicker
                 selectedValue={district}
                 onValueChange={setDistrict}
-                placeholder="Select District"
+                placeholder={t("damageForm.selectDistrict")}
                 filled={!!district}
                 items={SRI_LANKA_DISTRICTS.map((d) => ({ label: d, value: d }))}
               />
@@ -162,7 +190,7 @@ export default function DamageReport() {
           <View style={[styles.inputField, fieldStyle('village'), { marginTop: 10 }]}>
             <MaterialIcons name="location-city" size={18} color={focusedField === 'village' ? C.primary : C.textMuted} />
             <TextInput
-              placeholder="Village (e.g. Sigiriya)"
+              placeholder={t("damageForm.villagePlaceholder")}
               placeholderTextColor={C.textMuted}
               value={village} onChangeText={setVillage}
               onFocus={() => setFocusedField('village')}
@@ -173,11 +201,11 @@ export default function DamageReport() {
 
           <View style={styles.gpsPill}>
             <MaterialIcons name="my-location" size={15} color={C.primary} />
-            <Text style={styles.gpsPillText} numberOfLines={1}>{locationText}</Text>
+            <Text style={styles.gpsPillText} numberOfLines={1}>{displayLocationText}</Text>
             <Pressable onPress={getLocation} disabled={gpsLoading} style={styles.gpsBtn}>
               {gpsLoading
                 ? <ActivityIndicator size="small" color={C.surface} />
-                : <Text style={styles.gpsBtnText}>GPS</Text>}
+                : <Text style={styles.gpsBtnText}>{t("damageForm.gps")}</Text>}
             </Pressable>
           </View>
         </View>
@@ -186,15 +214,15 @@ export default function DamageReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>DAMAGE TYPE</Text>
+            <Text style={styles.sectionLabel}>{t("damageForm.damageType")}</Text>
           </View>
 
-          {DAMAGE_TYPES.map((type) => {
-            const selected = selectedTypes.includes(type);
+          {DAMAGE_TYPE_OPTIONS.map(({ value, labelKey }) => {
+            const selected = selectedTypes.includes(value);
             return (
               <Pressable
-                key={type}
-                onPress={() => toggleType(type)}
+                key={value}
+                onPress={() => toggleType(value)}
                 style={[styles.damageTypeRow, selected && styles.damageTypeRowSelected]}
               >
                 <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
@@ -205,7 +233,7 @@ export default function DamageReport() {
                   />
                 </View>
                 <Text style={[styles.damageTypeText, selected && styles.damageTypeTextSelected]}>
-                  {type}
+                  {t(labelKey)}
                 </Text>
               </Pressable>
             );
@@ -216,10 +244,10 @@ export default function DamageReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>DESCRIPTION</Text>
+            <Text style={styles.sectionLabel}>{t("damageForm.description")}</Text>
           </View>
           <TextInput
-            placeholder="Describe the damage..."
+            placeholder={t("damageForm.describePlaceholder")}
             placeholderTextColor={C.textMuted}
             value={description} onChangeText={setDescription}
             multiline
@@ -233,7 +261,7 @@ export default function DamageReport() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionAccent} />
-            <Text style={styles.sectionLabel}>EVIDENCE</Text>
+            <Text style={styles.sectionLabel}>{t("damageForm.evidence")}</Text>
           </View>
           <Pressable onPress={pickImage} style={[styles.imageSlot, image ? styles.imageSlotFilled : null]}>
             {image ? (
@@ -246,7 +274,7 @@ export default function DamageReport() {
             ) : (
               <>
                 <MaterialIcons name="add-a-photo" size={28} color={C.textMuted} />
-                <Text style={styles.imageSlotLabel}>Add Photo</Text>
+                <Text style={styles.imageSlotLabel}>{t("damageForm.addPhoto")}</Text>
               </>
             )}
           </Pressable>
@@ -255,12 +283,12 @@ export default function DamageReport() {
         {/* ── ACTION BUTTONS ── */}
         <View style={styles.buttonRow}>
           <Pressable onPress={clear} style={styles.clearBtn}>
-            <Text style={styles.clearText}>Clear</Text>
+            <Text style={styles.clearText}>{t("common.clear")}</Text>
           </Pressable>
           <Pressable onPress={submit} disabled={loading} style={styles.submitBtn}>
             {loading
               ? <ActivityIndicator color={C.surface} />
-              : <Text style={styles.submitText}>Submit Report</Text>}
+              : <Text style={styles.submitText}>{t("damageForm.submit")}</Text>}
           </Pressable>
         </View>
 

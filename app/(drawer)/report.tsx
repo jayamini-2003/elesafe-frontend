@@ -4,29 +4,30 @@ import { router } from "expo-router";
 import { theme } from "../../constants/theme";
 import { StyleSheet, Text, Pressable, View } from "react-native";
 import AppHeader from "../../components/AppHeader";
+import { useTranslation } from "../../context/LocaleContext";
 import { fontSize, fontFamily, spacing } from "../../utils/responsive";
 
 const C = theme.colors;
 const { regular, medium, semiBold, bold, extraBold } = fontFamily;
 
 export default function ReportTab() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.screen}>
 
-      <AppHeader title="Report Incident" subtitle="Select incident type" />
+      <AppHeader title={t('reportHub.title')} subtitle={t('reportHub.subtitle')} />
 
       <View style={styles.container}>
         <View style={styles.subHeader}>
-          <Text style={styles.headerEyebrow}>ELESAFE LANKA</Text>
-          <Text style={styles.headerSub}>Select the type of incident to report</Text>
+          <Text style={styles.headerEyebrow}>{t('reportHub.brand')}</Text>
+          <Text style={styles.headerSub}>{t('reportHub.selectType')}</Text>
         </View>
 
         <View style={styles.divider} />
 
-        {/* CARDS */}
         <View style={styles.cardGrid}>
 
-          {/* SIGHTING CARD */}
           <View style={[styles.card, styles.cardSighting]}>
             <View style={[styles.accentBar, { backgroundColor: C.primary }]} />
             <View style={styles.cardInner}>
@@ -36,17 +37,15 @@ export default function ReportTab() {
                 </View>
                 <View style={[styles.tagBadge, { backgroundColor: C.primary + "18", borderColor: C.primary + "44" }]}>
                   <View style={[styles.tagDot, { backgroundColor: C.primary }]} />
-                  <Text style={[styles.tagLabel, { color: C.primary }]}>SIGHTING</Text>
+                  <Text style={[styles.tagLabel, { color: C.primary }]}>{t('reportHub.sightingTag')}</Text>
                 </View>
               </View>
 
-              <Text style={[styles.cardTitle, { color: C.primaryDark }]}>Elephant Sighting</Text>
-              <Text style={styles.cardDesc}>
-                Report elephant presence, movement or behavior in your area.
-              </Text>
+              <Text style={[styles.cardTitle, { color: C.primaryDark }]}>{t('reportHub.sighting')}</Text>
+              <Text style={styles.cardDesc}>{t('reportHub.sightingDesc')}</Text>
 
               <View style={styles.pillsRow}>
-                {["📍 Location", "📷 Photo", "⚡ Quick"].map((p) => (
+                {[t('reportHub.pillLocation'), t('reportHub.pillPhoto'), t('reportHub.pillQuick')].map((p) => (
                   <View key={p} style={[styles.pill, { borderColor: C.primary + "44" }]}>
                     <Text style={[styles.pillText, { color: C.primary }]}>{p}</Text>
                   </View>
@@ -60,13 +59,12 @@ export default function ReportTab() {
                   { backgroundColor: pressed ? C.primaryDark : C.primary },
                 ]}
               >
-                <Text style={[styles.cardBtnText, { color: C.surface }]}>Start Sighting Report</Text>
+                <Text style={[styles.cardBtnText, { color: C.surface }]}>{t('reportHub.startSighting')}</Text>
                 <MaterialIcons name="arrow-forward" size={16} color={C.surface} />
               </Pressable>
             </View>
           </View>
 
-          {/* DAMAGE CARD */}
           <View style={[styles.card, styles.cardDamage]}>
             <View style={[styles.accentBar, { backgroundColor: C.danger }]} />
             <View style={styles.cardInner}>
@@ -76,17 +74,15 @@ export default function ReportTab() {
                 </View>
                 <View style={[styles.tagBadge, { backgroundColor: C.danger + "18", borderColor: C.danger + "44" }]}>
                   <View style={[styles.tagDot, { backgroundColor: C.danger }]} />
-                  <Text style={[styles.tagLabel, { color: C.danger }]}>URGENT</Text>
+                  <Text style={[styles.tagLabel, { color: C.danger }]}>{t('reportHub.urgent')}</Text>
                 </View>
               </View>
 
-              <Text style={[styles.cardTitle, { color: C.primaryDark }]}>Damage Report</Text>
-              <Text style={styles.cardDesc}>
-                Report property, crop, fence or vehicle damage caused by elephants.
-              </Text>
+              <Text style={[styles.cardTitle, { color: C.primaryDark }]}>{t('reportHub.damage')}</Text>
+              <Text style={styles.cardDesc}>{t('reportHub.damageDesc')}</Text>
 
               <View style={styles.pillsRow}>
-                {["📍 Location", "📷 Evidence", "🏷️ Type"].map((p) => (
+                {[t('reportHub.pillLocation'), t('reportHub.pillEvidence'), t('reportHub.pillType')].map((p) => (
                   <View key={p} style={[styles.pill, { borderColor: C.danger + "44" }]}>
                     <Text style={[styles.pillText, { color: C.danger }]}>{p}</Text>
                   </View>
@@ -100,7 +96,7 @@ export default function ReportTab() {
                   { backgroundColor: pressed ? "#a93025" : C.danger },
                 ]}
               >
-                <Text style={[styles.cardBtnText, { color: C.surface }]}>Start Damage Report</Text>
+                <Text style={[styles.cardBtnText, { color: C.surface }]}>{t('reportHub.startDamage')}</Text>
                 <MaterialIcons name="arrow-forward" size={16} color={C.surface} />
               </Pressable>
             </View>
@@ -108,12 +104,9 @@ export default function ReportTab() {
 
         </View>
 
-        {/* TIPS STRIP */}
         <View style={styles.tipsStrip}>
           <MaterialIcons name="info-outline" size={15} color="#f59e0b" />
-          <Text style={styles.tipsText}>
-            Stay safe • Enable GPS • Take photo if safe • Add full details
-          </Text>
+          <Text style={styles.tipsText}>{t('reportHub.tips')}</Text>
         </View>
 
       </View>
@@ -129,7 +122,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
 
-  /* ── Sub-header ── */
   subHeader: {
     paddingTop: spacing.md,
     marginBottom: 4,
@@ -155,7 +147,6 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
 
-  /* ── Cards ── */
   cardGrid: { flex: 1, gap: 14 },
   card: {
     flex: 1,
@@ -253,7 +244,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  /* ── Tips strip ── */
   tipsStrip: {
     flexDirection: "row",
     alignItems: "center",

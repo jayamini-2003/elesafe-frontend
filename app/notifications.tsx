@@ -5,6 +5,7 @@ import { theme } from "../constants/theme";
 import React, { useEffect } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import AppHeader from '../components/AppHeader';
+import { useTranslation } from '../context/LocaleContext';
 import { SightingAlert, useAlertSocket } from '../hooks/useAlertSocket';
 import { fontSize, fontFamily, spacing } from '../utils/responsive';
 
@@ -17,30 +18,40 @@ const BEHAVIOR_CONFIG: Record<string, { color: string; icon: string }> = {
   FEEDING:    { color: '#3b82f6',  icon: 'food'                   },
 };
 
-function timeAgo(receivedAt: number): string {
-  const diff = Math.floor((Date.now() - receivedAt) / 1000);
-  if (diff < 60)    return `${diff}s ago`;
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
 export default function Notifications() {
+  const { t } = useTranslation();
   const { alertHistory, markAllRead, markOneRead } = useAlertSocket();
 
   useEffect(() => { markAllRead(); }, []);
+
+  const timeAgo = (receivedAt: number): string => {
+    const diff = Math.floor((Date.now() - receivedAt) / 1000);
+    if (diff < 60)    return t('common.secondsAgo', { count: diff });
+    if (diff < 3600)  return t('common.minutesAgo', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('common.hoursAgo', { count: Math.floor(diff / 3600) });
+    return t('common.daysAgo', { count: Math.floor(diff / 86400) });
+  };
+
+  const formatBehavior = (behavior: string) => {
+    const key = `map.behaviors.${behavior}`;
+    return t(key) !== key ? t(key) : behavior;
+  };
 
   const handleAlertPress = (alert: SightingAlert) => {
     markOneRead(alert.reportId);
     router.push({ pathname: '/alert-detail', params: { alert: JSON.stringify(alert) } });
   };
 
+  const subtitle = alertHistory.length > 0
+    ? t('notifications.last24h', { count: alertHistory.length })
+    : t('notifications.last24hShort');
+
   return (
     <View style={styles.screen}>
 
       <AppHeader
-        title="Alerts"
-        subtitle={alertHistory.length > 0 ? `${alertHistory.length} alert${alertHistory.length > 1 ? 's' : ''} · Last 24h` : 'Last 24 hours'}
+        title={t('notifications.title')}
+        subtitle={subtitle}
         mode="back"
         backRoute="/(drawer)/home"
         rightIcon={alertHistory.length > 0 ? "notifications-active" : "notifications-none"}
@@ -60,15 +71,12 @@ export default function Notifications() {
               style={({ pressed }) => [styles.alertCard, pressed && styles.alertCardPressed]}
               onPress={() => handleAlertPress(item)}
             >
-              {/* Left color bar */}
               <View style={[styles.cardLeftBar, { backgroundColor: cfg.color }]} />
 
-              {/* Behavior icon circle */}
               <View style={[styles.iconWrap, { backgroundColor: cfg.color + '22' }]}>
                 <MaterialCommunityIcons name={cfg.icon as any} size={22} color={cfg.color} />
               </View>
 
-              {/* Card body */}
               <View style={styles.cardBody}>
                 <View style={styles.cardTopRow}>
                   <Text style={styles.cardTitle} numberOfLines={1}>
@@ -79,11 +87,11 @@ export default function Notifications() {
                 <View style={styles.cardTagRow}>
                   <View style={[styles.behaviorTag, { backgroundColor: cfg.color + '18', borderColor: cfg.color + '44' }]}>
                     <Text style={[styles.behaviorTagText, { color: cfg.color }]}>
-                      {item.behavior}
+                      {formatBehavior(item.behavior)}
                     </Text>
                   </View>
                   <Text style={styles.cardSub}>
-                    {item.numberOfElephants} elephant{item.numberOfElephants > 1 ? 's' : ''}
+                    {t('common.elephants', { count: item.numberOfElephants })}
                   </Text>
                 </View>
                 {item.additionalNotes ? (
@@ -99,7 +107,7 @@ export default function Notifications() {
           alertHistory.length > 0 ? (
             <View style={styles.listHeader}>
               <View style={styles.liveDot} />
-              <Text style={styles.listHeaderText}>Live elephant activity feed</Text>
+              <Text style={styles.listHeaderText}>{t('notifications.subtitle')}</Text>
             </View>
           ) : null
         }
@@ -108,16 +116,14 @@ export default function Notifications() {
             <View style={styles.emptyIconCircle}>
               <MaterialCommunityIcons name="bell-sleep-outline" size={42} color={C.textMuted} />
             </View>
-            <Text style={styles.emptyTitle}>No alerts yet</Text>
-            <Text style={styles.emptySub}>
-              Live elephant sighting alerts will appear here when reported nearby.
-            </Text>
+            <Text style={styles.emptyTitle}>{t('notifications.empty')}</Text>
+            <Text style={styles.emptySub}>{t('notifications.emptyDesc')}</Text>
             <Pressable
               style={styles.emptyHomeBtn}
               onPress={() => router.replace('/(drawer)/home')}
             >
               <MaterialIcons name="home" size={16} color={C.surface} />
-              <Text style={styles.emptyHomeBtnText}>Back to Home</Text>
+              <Text style={styles.emptyHomeBtnText}>{t('notifications.backHome')}</Text>
             </Pressable>
           </View>
         }
@@ -131,7 +137,6 @@ const styles = StyleSheet.create({
 
   list: { padding: spacing.md, gap: 10, paddingBottom: 40 },
 
-  /* ── List header ── */
   listHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -151,7 +156,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  /* ── Alert card ── */
   alertCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -215,7 +219,6 @@ const styles = StyleSheet.create({
   cardSub:  { color: C.textMuted, fontFamily: fontFamily.regular, fontSize: fontSize.xs },
   cardNotes:{ color: C.textMuted, fontFamily: fontFamily.regular, fontSize: fontSize.xxs, marginTop: 2 },
 
-  /* ── Empty state ── */
   emptyWrap: { alignItems: 'center', paddingTop: spacing.xxl, paddingHorizontal: 32, gap: 12 },
   emptyIconCircle: {
     width: 80,
