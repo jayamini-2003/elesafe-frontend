@@ -2,21 +2,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-// 👇 Change this to your computer's local IP when running on a device
-// Use http://10.0.2.2:8080 for Android emulator
-// Use http://localhost:8080 for iOS simulator
-// Use http://YOUR_PC_IP:8080 for physical device (e.g. http://192.168.1.5:8080)
 export const BASE_URL = 'https://elesafe.onrender.com';
+
+const AUTH_PATHS = ['/api/auth/login', '/api/auth/register', '/api/auth/refresh-token'];
 
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 30000,
 });
 
-// ✅ Auto-attach JWT token to every request
 api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem('accessToken');
   if (token) {
@@ -25,11 +22,17 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// ✅ Auto-refresh token on 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = String(originalRequest?.url || '');
+
+    // Login/register 401 must not trigger token refresh (wrong password also returns 401)
+    const isAuthRoute = AUTH_PATHS.some((path) => requestUrl.includes(path));
+    if (isAuthRoute) {
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

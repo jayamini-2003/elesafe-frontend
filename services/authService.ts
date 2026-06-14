@@ -33,7 +33,13 @@ export interface UpdateProfilePayload {
 
 export const authService = {
   async login(payload: LoginPayload) {
-    const res = await api.post('/api/auth/login', payload);
+    const email = payload.email.trim();
+    const password = payload.password;
+
+    // Clear stale session so failed login shows the real API error
+    await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
+
+    const res = await api.post('/api/auth/login', { email, password });
     const data = res.data;
     await AsyncStorage.setItem('accessToken', data.accessToken);
     await AsyncStorage.setItem('refreshToken', data.refreshToken);

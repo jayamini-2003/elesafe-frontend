@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { authService } from '../../services/authService';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 import { useTranslation } from '../../context/LocaleContext';
 import { theme } from '../../constants/theme';
@@ -37,8 +38,8 @@ export default function LoginScreen() {
     try {
       await authService.login({ email, password });
       router.replace('/(drawer)/home');
-    } catch (err: any) {
-      setError(err.response?.data?.message || t('login.loginFailed'));
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, t('login.loginFailed')));
     } finally {
       setLoading(false);
     }
